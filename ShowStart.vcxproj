@@ -18,7 +18,9 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
-    <AppxPackage>true</AppxPackage>
+    <AppxPackage>false</AppxPackage>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
@@ -136,20 +138,6 @@
       <SubType>Code</SubType>
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="readme.txt">
-      <DeploymentContent>false</DeploymentContent>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Assets\LockScreenLogo.scale-200.png" />
-    <Image Include="Assets\SplashScreen.scale-200.png" />
-    <Image Include="Assets\Square150x150Logo.scale-200.png" />
-    <Image Include="Assets\Square44x44Logo.scale-200.png" />
-    <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
-    <Image Include="Assets\StoreLogo.png" />
-    <Image Include="Assets\Wide310x150Logo.scale-200.png" />
   </ItemGroup>
   <!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging

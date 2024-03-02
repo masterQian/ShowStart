@@ -17,37 +17,6 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\Wide310x150Logo.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\StoreLogo.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Square150x150Logo.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Square44x44Logo.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\SplashScreen.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\LockScreenLogo.scale-200.png">
-      <Filter>Assets</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Assets">
-      <UniqueIdentifier>{500e1fbe-6663-45b1-9848-96cfcd25f05c}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="readme.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
@@ -55,5 +24,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="others">
+      <UniqueIdentifier>{2e6740b9-019b-43a0-a915-99b3d8d5a97a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
