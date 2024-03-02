@@ -1,16 +1,13 @@
 #pragma once
-
 #include "App.xaml.g.h"
 
-namespace winrt::ShowStart::implementation
-{
-    struct App : AppT<App>
-    {
+using namespace winrt::Microsoft::UI::Xaml;
+
+namespace winrt::ShowStart::implementation {
+    struct App : AppT<App> {
         App();
+        void OnLaunched(LaunchActivatedEventArgs const&);
 
-        void OnLaunched(Microsoft::UI::Xaml::LaunchActivatedEventArgs const&);
-
-    private:
-        winrt::Microsoft::UI::Xaml::Window window{ nullptr };
+        Window window{ nullptr };
     };
 }

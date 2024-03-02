@@ -6,12 +6,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#if __has_include(<winrt/Microsoft.UI.Xaml.Controls.h>)
-#include <winrt/Microsoft.UI.Xaml.Controls.h>
-#endif
-#if __has_include(<winrt/Microsoft.UI.Xaml.h>)
-#include <winrt/Microsoft.UI.Xaml.h>
-#endif
 
 
 namespace winrt::ShowStart::implementation
@@ -32,15 +26,6 @@ namespace winrt::ShowStart::implementation
         virtual ::winrt::Microsoft::UI::Xaml::Markup::IComponentConnector GetBindingConnector(int32_t connectionId, IInspectable const& target);
         void UnloadObject(::winrt::Microsoft::UI::Xaml::DependencyObject const& dependencyObject);
         void DisconnectUnloadedObject(int32_t connectionId);
-
-        ::winrt::Microsoft::UI::Xaml::Controls::Button myButton()
-        {
-            return _myButton;
-        }
-        void myButton(::winrt::Microsoft::UI::Xaml::Controls::Button value)
-        {
-            _myButton = value;
-        }
         
     protected:
         bool _contentLoaded{false};
@@ -48,7 +33,6 @@ namespace winrt::ShowStart::implementation
     private:
         struct MainWindow_obj1_Bindings;
 
-        ::winrt::Microsoft::UI::Xaml::Controls::Button _myButton{nullptr};
     };
 }
 
