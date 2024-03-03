@@ -8,6 +8,6 @@ namespace winrt::ShowStart::implementation {
         App();
         void OnLaunched(LaunchActivatedEventArgs const&);
 
-        Window window{ nullptr };
+        Window main_window{ nullptr };
     };
 }

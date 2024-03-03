@@ -1,0 +1,20 @@
+import "singer.idl";
+import "ticket.idl";
+
+namespace ShowStart {
+    [default_interface]
+    runtimeclass ShowInfo : Microsoft.UI.Xaml.Controls.UserControl, Microsoft.UI.Xaml.Data.INotifyPropertyChanged {
+        ShowInfo();
+
+        String Title; // 标题
+        Microsoft.UI.Xaml.Media.ImageSource Poster; // 海报
+        String Price; // 价格
+        String ShowTime; // 演出时间
+        String Host; // 主办方
+        String Address; // 地址
+        Microsoft.UI.Xaml.Media.ImageSource HostAvatar; // 主办方头像
+        String Service; // 服务
+        Windows.Foundation.Collections.IObservableVector<Singer> Singers; // 歌手
+        Windows.Foundation.Collections.IObservableVector<Ticket> Tickets; // 票种
+    }
+}

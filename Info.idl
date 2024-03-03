@@ -1,0 +1,16 @@
+namespace ShowStart {
+    [default_interface]
+    runtimeclass Info : Microsoft.UI.Xaml.Data.INotifyPropertyChanged {
+        Info();
+
+        String UserId; // 用户ID
+        String Sign; // 登录签名
+        String StFlpv;
+        String Token; // 登录令牌
+        String ActivityId; // 演出ID
+        String TicketId; // 票ID
+        String AccessToken;
+        String IdToken;
+        String Message; // 请求信息
+    }
+}

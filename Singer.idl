@@ -1,0 +1,8 @@
+namespace ShowStart {
+    [default_interface]
+    runtimeclass Singer {
+        Singer(String name, String avatar);
+        String Name { get; }; // 歌手名
+        Microsoft.UI.Xaml.Media.ImageSource AvatarSource { get; }; // 歌手头像
+    }
+}

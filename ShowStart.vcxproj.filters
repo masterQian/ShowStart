@@ -5,9 +5,21 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainWindow.xaml" />
+    <Page Include="ShowInfo.xaml">
+      <Filter>models</Filter>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
+    <Midl Include="Info.idl">
+      <Filter>models</Filter>
+    </Midl>
+    <Midl Include="Singer.idl">
+      <Filter>models</Filter>
+    </Midl>
+    <Midl Include="Ticket.idl">
+      <Filter>models</Filter>
+    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -16,10 +28,27 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp">
       <Filter>others</Filter>
     </ClCompile>
+    <ClCompile Include="Info.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="Requests.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="Singer.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="Ticket.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="others">
       <UniqueIdentifier>{2e6740b9-019b-43a0-a915-99b3d8d5a97a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models">
+      <UniqueIdentifier>{4c3d540b-545e-4871-8ba5-2632724672a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{a20d77ed-f784-487d-9b40-970c7b5f6e52}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -31,15 +60,31 @@
     <None Include="packages.config">
       <Filter>others</Filter>
     </None>
+    <None Include="showstart.js" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
       <Filter>others</Filter>
+    </ClInclude>
+    <ClInclude Include="Info.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="ShowStart.h" />
+    <ClInclude Include="Singer.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="Ticket.h">
+      <Filter>models</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis">
       <Filter>others</Filter>
     </Natvis>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\logo.png">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

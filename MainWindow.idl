@@ -1,6 +1,16 @@
+import "Info.idl";
+import "ShowInfo.idl";
+
 namespace ShowStart {
     [default_interface]
     runtimeclass MainWindow : Microsoft.UI.Xaml.Window {
         MainWindow();
+
+        Info GlobalInfo { get; };
+        Windows.Web.Http.HttpClient Client { get; };
+
+        ShowStart.ShowInfo ShowPanel { get; };
+
+        Microsoft.UI.Xaml.DataTemplate SingerItemTemplate { get; };
     }
 }

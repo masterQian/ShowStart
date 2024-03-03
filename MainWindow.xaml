@@ -5,8 +5,77 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="using:ShowStart"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d">
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
-        <TextBlock Text="Shit" />
-    </StackPanel>
+        Title="秀动抢票" mc:Ignorable="d">
+    <Grid x:Name="MainGrid" ColumnDefinitions="400, *" RowDefinitions="48, Auto, *">
+        <Grid.Resources>
+            <DataTemplate x:Name="SingerItemTemplate" x:DataType="local:Singer">
+                <StackPanel Orientation="Horizontal">
+                    <PersonPicture Width="48" Margin="10" ProfilePicture="{Binding AvatarSource}" />
+                    <TextBlock Margin="5,10,5,5" Style="{StaticResource BodyStrongTextBlockStyle}" Text="{Binding Name}" />
+                </StackPanel>
+            </DataTemplate>
+        </Grid.Resources>
+        <StackPanel x:Name="SP_TitleBar" Grid.Row="0" Grid.Column="0"
+                    Grid.ColumnSpan="2" Background="LightGray"
+                    Orientation="Horizontal">
+            <Image Width="105" Height="40" Margin="8,0,16,0"
+                   VerticalAlignment="Center"
+                   Source="Assets/logo.png" Stretch="Fill" />
+        </StackPanel>
+        <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="0"
+              ColumnDefinitions="Auto, *"
+              RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto, *">
+            <TextBlock Grid.Row="0" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="UserId" />
+            <TextBox Grid.Row="0" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.UserId, Mode=TwoWay}" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="Sign" />
+            <TextBox Grid.Row="1" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.Sign, Mode=TwoWay}" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="StFlpv" />
+            <TextBox Grid.Row="2" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.StFlpv, Mode=TwoWay}" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="Token" />
+            <TextBox Grid.Row="3" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.Token, Mode=TwoWay}" />
+            <TextBlock Grid.Row="4" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="ActivityId" />
+            <TextBox Grid.Row="4" Grid.Column="1" Margin="10,5,10,5" Text="{x:Bind GlobalInfo.ActivityId, Mode=TwoWay}" />
+            <TextBlock Grid.Row="5" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="TicketId" />
+            <TextBox Grid.Row="5" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.TicketId, Mode=TwoWay}" />
+            <TextBlock Grid.Row="6" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="AccessToken" />
+            <TextBox Grid.Row="6" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.AccessToken, Mode=TwoWay}" />
+            <TextBlock Grid.Row="7" Grid.Column="0" Margin="10,5,10,5"
+                       VerticalAlignment="Center" Text="IdToken" />
+            <TextBox Grid.Row="7" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.IdToken, Mode=TwoWay}" />
+            <TextBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                     Margin="10" IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.Message, Mode=TwoWay}"
+                     TextWrapping="Wrap" />
+        </Grid>
+        <CommandBar Grid.Row="1" Grid.Column="1"
+                    Background="Transparent"
+                    DefaultLabelPosition="Right" IsOpen="False">
+            <AppBarButton x:Name="GetDetailsButton" AllowFocusOnInteraction="True" Icon="Zoom" Label="查看详情" />
+            <AppBarButton x:Name="BuyTicketsButton" AllowFocusOnInteraction="True" Icon="Favorite" Label="购买" />
+            <AppBarButton x:Name="ThreadBuyButton" AllowFocusOnInteraction="True" Icon="Play" Label="多线程抢票" />
+        </CommandBar>
+        <local:ShowInfo x:Name="ShowPanel" Grid.Row="2" Grid.Column="1"
+                        BorderBrush="AliceBlue" BorderThickness="2" />
+    </Grid>
 </Window>

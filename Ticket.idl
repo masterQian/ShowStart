@@ -1,0 +1,13 @@
+namespace ShowStart {
+    [default_interface]
+    runtimeclass Ticket {
+        Ticket(String mId, String mType, String mPrice, String mSession, String mDeadline, String mMaxNum, String mRemain);
+        String Id { get; }; // 票Id
+        String Type { get; }; // 票类型
+        String Price { get; }; // 价格
+        String Session { get; }; // 场次
+        String Deadline { get; }; // 停售时间
+        String MaxNum { get; }; // 最大购买张数
+        String Remain { get; }; // 余票
+    }
+}

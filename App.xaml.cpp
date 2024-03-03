@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "App.xaml.h"
 #include "MainWindow.xaml.h"
+#include "ShowStart.h"
 
 namespace winrt::ShowStart::implementation {
     App::App() {
@@ -16,6 +17,7 @@ namespace winrt::ShowStart::implementation {
 
     void App::OnLaunched(LaunchActivatedEventArgs const& args) {
         window = make<MainWindow>();
-        window.Activate();
+        main_window = window;
+        main_window.Activate();
     }
 }
