@@ -29,23 +29,6 @@ namespace work {
 		return JsonValue::CreateNumberValue(static_cast<double>(value));
 	}
 
-	struct OrderInfo {
-		int skuType; // 票类型
-		hstring num; // 票张数
-		int goodsId; // 演出ID
-		hstring skuId; // 票ID
-		double price; // 价格
-		hstring goodsPhoto; // 演出照片
-		int dyPOIType; // 抖音?
-		hstring goodsName; // 演出名称
-		hstring areaCode; // 地域
-		hstring telephone; // 手机号码
-		int sessionId; // 订单ID
-		hstring totalAmount; // 总价
-	};
-}
-
-namespace work {
 	// 处理请求头
 	void MakeHeader(Headers::HttpRequestHeaderCollection const& headers, hstring const& crtrace_id, hstring const& url, hstring const& data, ShowStart::Info const& info) {
 		hstring user_id{ info.UserId() };
@@ -76,12 +59,26 @@ namespace work {
 		headers.Insert(L"CRPSIGN", util::get_md5(crp_sign));
 	}
 
-	// 更新Token
-	IAsyncAction UpdateToken() {
+	// 加密下单数据
+	hstring EncryptOrderData(hstring const& data, hstring const& crtrace_id) {
 		ShowStart::Info info{ window.GlobalInfo() };
+		hstring T{ crtrace_id }, P{ info.Token() };
+		std::wstring k;
+		for (auto& i : { 2, 11, 22, 23, 29, 30, 33, 36 }) {
+			k.push_back(T[i - 1]);
+		}
+		for (auto& i : { 1, 7, 8, 12, 15, 18, 19, 28 }) {
+			k.push_back(P[i - 1]);
+		}
+		return util::get_AES_base64(data, k.data());
+	}
+}
+
+namespace work {
+	IAsyncOperation<JsonObject> api_get_token() {
+		JsonObject ret;
 		HttpClient client{ window.Client() };
-		info.AccessToken(L"");
-		info.IdToken(L"");
+		const ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/waf/gettoken" };
 		hstring data{ util::map_to_json({
 			{ L"st_flpv", strjson(info.StFlpv()) },
@@ -93,23 +90,76 @@ namespace work {
 		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
 		res.EnsureSuccessStatusCode();
 		hstring body{ co_await res.Content().ReadAsStringAsync() };
-		info.Message(body);
-
+		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
-		if (json.Lookup(L"success").GetBoolean()) {
-			auto result{ json.Lookup(L"result").GetObject() };
-			hstring access_token{ result.Lookup(L"accessToken").GetObject().Lookup(L"access_token").GetString() };
-			hstring id_token{ result.Lookup(L"idToken").GetObject().Lookup(L"id_token").GetString() };
-
-			info.AccessToken(access_token);
-			info.IdToken(id_token);
+		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok) {
+			auto result{ json.GetNamedObject(L"result") };
+			ret.Insert(L"access_token", result.GetNamedObject(L"accessToken").Lookup(L"access_token"));
+			ret.Insert(L"id_token", result.GetNamedObject(L"idToken").Lookup(L"id_token"));
 		}
+		else {
+			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
+		}
+		co_return ret;
 	}
 
-	// 获取票种列表
-	IAsyncAction GetList() {
-		ShowStart::Info info{ window.GlobalInfo() };
+	IAsyncOperation<JsonObject> api_activity_details() {
+		JsonObject ret;
 		HttpClient client{ window.Client() };
+		const ShowStart::Info info{ window.GlobalInfo() };
+		Uri url{ L"https://wap.showstart.com/v3/wap/activity/details" };
+		hstring data{ util::map_to_json({
+			{ L"st_flpv", strjson(info.StFlpv()) },
+			{ L"sign", strjson(info.Sign()) },
+			{ L"trackPath", L""_json },
+			{ L"coupon", L""_json },
+			{ L"activityId", strjson(info.ActivityId()) },
+			{ L"shareId", L""_json }
+			}).Stringify() };
+		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/details", data, info);
+		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		res.EnsureSuccessStatusCode();
+		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		ret.Insert(L"Message", strjson(body));
+		auto json{ JsonObject::Parse(body) };
+		auto ok{ json.GetNamedString(L"state") == L"1" };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok) {
+			auto result{ json.GetNamedObject(L"result") };
+			ret.Insert(L"activityName", strjson(util::strip(result.GetNamedString(L"activityName"))));
+			ret.Insert(L"avatar", result.Lookup(L"avatar"));
+			ret.Insert(L"price", result.Lookup(L"price"));
+			ret.Insert(L"showTime", result.Lookup(L"showTime"));
+			auto site{ result.GetNamedObject(L"site") };
+			ret.Insert(L"host", site.Lookup(L"name"));
+			ret.Insert(L"address", site.Lookup(L"address"));
+			ret.Insert(L"hostAvatar", site.Lookup(L"avatar"));
+			ret.Insert(L"service", strjson(util::replace_br(result.GetNamedString(L"serviceTemplateEnContent"))));
+			JsonArray ret_singers;
+			if (auto singers{ result.GetNamedArray(L"sessionUserInfos") }; singers.Size() > 0U) {
+				for (auto iter : singers.GetObjectAt(0U).GetNamedArray(L"userInfos")) {
+					auto singer{ iter.GetObject() };
+					ret_singers.Append(util::map_to_json({
+						{ L"name", singer.Lookup(L"name") },
+						{ L"avatar", singer.Lookup(L"avatar") }
+						}));
+				}
+			}
+			ret.Insert(L"Singers", ret_singers);
+		}
+		else {
+			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
+		}
+		co_return ret;
+	}
+
+	IAsyncOperation<JsonObject> api_ticket_list() {
+		JsonObject ret;
+		HttpClient client{ window.Client() };
+		const ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/wap/activity/V2/ticket/list" };
 		hstring data{ util::map_to_json({
 			{ L"st_flpv", strjson(info.StFlpv()) },
@@ -123,169 +173,125 @@ namespace work {
 		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
 		res.EnsureSuccessStatusCode();
 		hstring body{ co_await res.Content().ReadAsStringAsync() };
-		info.Message(body);
-
-		auto showInfo{ window.ShowPanel() };
+		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
-		if (json.Lookup(L"state").GetString() == L"1") {
-			auto ticketsVector{ single_threaded_observable_vector<ShowStart::Ticket>() };
-			for (auto sessions : json.Lookup(L"result").GetArray()) {
+		auto ok{ json.GetNamedString(L"state") == L"1" };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok) {
+			JsonArray ret_tickets;
+			for (auto sessions : json.GetNamedArray(L"result")) {
 				auto session{ sessions.GetObject() };
-				auto start_time{ session.Lookup(L"sessionName").GetString() };
-				for (auto ticket_list : session.Lookup(L"ticketList").GetArray()) {
-					auto ticket{ ticket_list.GetObject() };
-					auto max_num{ (int)ticket.Lookup(L"canBuyNum").GetNumber() };
-					auto remain_ticket{ (int)ticket.Lookup(L"remainTicket").GetNumber() };
-					hstring remain{ L"余票未知" };
-					if (remain_ticket == 0) remain = L"告罄";
-					else if (remain_ticket == 1) remain = L"余票紧张";
-					else if (remain_ticket == 2) remain = L"余票充足";
-					ticketsVector.Append(ShowStart::Ticket{
-						ticket.Lookup(L"ticketId").GetString(),
-						ticket.Lookup(L"ticketType").GetString(),
-						ticket.Lookup(L"sellingPrice").GetString(),
-						start_time,
-						ticket.Lookup(L"time").GetString(),
-						winrt::format(L"限购{}张", max_num),
-						remain,
-						});
+				auto session_name{ session.Lookup(L"sessionName") };
+				for (auto iter : session.GetNamedArray(L"ticketList")) {
+					auto ticket{ iter.GetObject() };
+					hstring remain;
+					switch ((int)ticket.GetNamedNumber(L"remainTicket")) {
+					case 0: remain = L"告罄"; break;
+					case 1: remain = L"余票紧张"; break;
+					case 2: remain = L"余票充足"; break;
+					default: remain = L"余票未知"; break;
+					}
+					ret_tickets.Append(util::map_to_json({
+						{ L"ticketId", ticket.Lookup(L"ticketId") },
+						{ L"ticketType", ticket.Lookup(L"ticketType") },
+						{ L"sellingPrice", ticket.Lookup(L"sellingPrice") },
+						{ L"sessionName", session_name },
+						{ L"time", ticket.Lookup(L"time") },
+						{ L"maxNum", strjson(winrt::format(L"限购{}张", (int)ticket.GetNamedNumber(L"canBuyNum"))) },
+						{ L"remainTicket", strjson(remain) }
+						}));
 				}
 			}
-			showInfo.Tickets(ticketsVector);
+			ret.Insert(L"Tickets", ret_tickets);
 		}
+		else {
+			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
+		}
+		co_return ret;
 	}
 
-	// 获取演出信息
-	IAsyncAction GetDetails() {
-		ShowStart::Info info{ window.GlobalInfo() };
+	IAsyncOperation<JsonObject> api_order_confirm(JsonObject args) {
+		JsonObject ret;
 		HttpClient client{ window.Client() };
-		Uri url{ L"https://wap.showstart.com/v3/wap/activity/details" };
+		ShowStart::Info info{ window.GlobalInfo() };
+		auto ticket_num{ (int)args.GetNamedNumber(L"TicketNum") };
+		Uri url{ L"https://wap.showstart.com/v3/order/wap/order/confirm" };
 		hstring data{ util::map_to_json({
 			{ L"st_flpv", strjson(info.StFlpv()) },
 			{ L"sign", strjson(info.Sign()) },
 			{ L"trackPath", L""_json },
-			{ L"coupon", L""_json },
-			{ L"activityId", strjson(info.ActivityId()) },
-			{ L"shareId", L""_json }
-		}).Stringify() };
+			{ L"sequence", strjson(info.ActivityId()) },
+			{ L"ticketId", strjson(info.TicketId()) },
+			{ L"ticketNum", strjson(to_hstring(ticket_num)) },
+			}).Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/details", data, info);
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/order/wap/order/confirm", data, info);
 		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
 		res.EnsureSuccessStatusCode();
 		hstring body{ co_await res.Content().ReadAsStringAsync() };
-		info.Message(body);
-
-		auto showInfo{ window.ShowPanel() };
 		auto json{ JsonObject::Parse(body) };
-		if (json.Lookup(L"state").GetString() == L"1") {
-			auto result{ json.Lookup(L"result").GetObject() };
-			auto site{ result.Lookup(L"site").GetObject() };
-			auto sessionUserInfos{ result.Lookup(L"sessionUserInfos").GetArray() };
-
-			showInfo.Title(util::strip(result.Lookup(L"activityName").GetString()));
-			{
-				Media::Imaging::BitmapImage bmp;
-				bmp.UriSource(Uri(result.Lookup(L"avatar").GetString()));
-				bmp.CreateOptions(Media::Imaging::BitmapCreateOptions::IgnoreImageCache);
-				bmp.DecodePixelWidth(300);
-				showInfo.Poster(bmp);
-			}
-			showInfo.Price(result.Lookup(L"price").GetString());
-			showInfo.ShowTime(result.Lookup(L"showTime").GetString());
-			showInfo.Host(site.Lookup(L"name").GetString());
-			showInfo.Address(site.Lookup(L"address").GetString());
-			{
-				Media::Imaging::BitmapImage bmp;
-				bmp.UriSource(Uri(site.Lookup(L"avatar").GetString()));
-				bmp.CreateOptions(Media::Imaging::BitmapCreateOptions::IgnoreImageCache);
-				bmp.DecodePixelWidth(48);
-				showInfo.HostAvatar(bmp);
-			}
-			showInfo.Service(util::replace_br(result.Lookup(L"serviceTemplateEnContent").GetString()));
-			
-			auto singersVector{ single_threaded_observable_vector<ShowStart::Singer>() };
-			if (sessionUserInfos.Size() > 0U) {
-				auto singerInfos{ sessionUserInfos.GetObjectAt(0U).Lookup(L"userInfos").GetArray() };
-				for (auto singerInfo : singerInfos) {
-					auto singer{ singerInfo.GetObject() };
-					singersVector.Append(ShowStart::Singer{ singer.Lookup(L"name").GetString(),
-						singer.Lookup(L"avatar").GetString() });
-				}
-			}
-			showInfo.Singers(singersVector);
-
-			co_await GetList();
+		auto ok{ json.GetNamedString(L"state") == L"1" };
+		if (ok) {
+			auto orderInfoVo{ json.GetNamedObject(L"result").GetNamedObject(L"orderInfoVo") };
+			auto ticketPriceVo{ orderInfoVo.GetNamedObject(L"ticketPriceVo") };
+			auto price{ ticketPriceVo.GetNamedNumber(L"price") };
+			ret = util::map_to_json({
+				{ L"OK", JsonValue::CreateBooleanValue(true) },
+				{ L"skuType", ticketPriceVo.Lookup(L"ticketType") },
+				{ L"num", strjson(to_hstring(ticket_num)) },
+				{ L"goodsId", orderInfoVo.Lookup(L"activityId") },
+				{ L"skuId", strjson(info.TicketId()) },
+				{ L"price", JsonValue::CreateNumberValue(price) },
+				{ L"goodsPhoto", orderInfoVo.Lookup(L"poster") },
+				{ L"dyPOIType", ticketPriceVo.Lookup(L"dyPOIType") },
+				{ L"goodsName", orderInfoVo.Lookup(L"title") },
+				{ L"areaCode", orderInfoVo.Lookup(L"areaCode") },
+				{ L"telephone", orderInfoVo.Lookup(L"telephone") },
+				{ L"sessionId", orderInfoVo.Lookup(L"sessionId") },
+				{ L"totalAmount", strjson(winrt::format(L"{:.2f}", price * ticket_num)) }
+				});
 		}
+		else {
+			ret.Insert(L"OK", JsonValue::CreateBooleanValue(false));
+			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
+		}
+		ret.Insert(L"Message", strjson(body));
+		co_return ret;
 	}
 
-	// 输入票张数
-	IAsyncOperation<unsigned int> InputTicketNum() {
-		Controls::ContentDialog dialog;
-		dialog.CloseButtonText(L"取消");
-		dialog.DefaultButton(Controls::ContentDialogButton::Primary);
-		dialog.PrimaryButtonText(L"确定");
-		dialog.Title(box_value(L"输入票的张数"));
-		Controls::NumberBox number_box;
-		number_box.Value(1.0);
-		number_box.Minimum(1.0);
-		number_box.Maximum(99.0);
-		dialog.Content(number_box);
-		dialog.XamlRoot(window.ShowPanel().XamlRoot());
-		auto dialog_result{ co_await dialog.ShowAsync() };
-		if (dialog_result != Controls::ContentDialogResult::Primary) {
-			co_return 0U;
-		}
-		co_return static_cast<unsigned int>(number_box.Value());
-	}
-
-	// 加密下单数据
-	hstring EncryptOrder(hstring const& data, hstring const& crtrace_id) {
-		ShowStart::Info info{ window.GlobalInfo() };
-		hstring T{ crtrace_id }, P{ info.Token() };
-		std::wstring k;
-		for (auto& i : { 2, 11, 22, 23, 29, 30, 33, 36 }) {
-			k.push_back(T[i - 1]);
-		}
-		for (auto& i : { 1, 7, 8, 12, 15, 18, 19, 28 }) {
-			k.push_back(P[i - 1]);
-		}
-		return util::get_AES_base64(data, k.data());
-	}
-
-	// 下单
-	IAsyncAction Order(OrderInfo order_info) {
-		ShowStart::Info info{ window.GlobalInfo() };
+	IAsyncOperation<JsonObject> api_order(JsonObject args) {
+		JsonObject ret;
 		HttpClient client{ window.Client() };
+		ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/nj/order/order" };
 		hstring crtrace_id{ util::uuid32() + util::timestamp13() };
-		
 		JsonArray order_details;
 		order_details.Append(util::map_to_json({
 			{ L"goodsType", 1_json },
-			{ L"skuType", intjson(order_info.skuType) },
-			{ L"num", strjson(order_info.num) },
-			{ L"goodsId", intjson(order_info.goodsId) },
-			{ L"skuId", strjson(order_info.skuId) },
-			{ L"price", JsonValue::CreateNumberValue(order_info.price) },
-			{ L"goodsPhoto", strjson(order_info.goodsPhoto) },
-			{ L"dyPOIType", intjson(order_info.dyPOIType) },
-			{ L"goodsName", strjson(order_info.goodsName) }
+			{ L"skuType", args.Lookup(L"skuType") },
+			{ L"num", args.Lookup(L"num") },
+			{ L"goodsId", args.Lookup(L"goodsId") },
+			{ L"skuId", args.Lookup(L"skuId") },
+			{ L"price", args.Lookup(L"price") },
+			{ L"goodsPhoto", args.Lookup(L"goodsPhoto") },
+			{ L"dyPOIType", args.Lookup(L"dyPOIType") },
+			{ L"goodsName", args.Lookup(L"goodsName") }
 			}));
 		auto json_data{ util::map_to_json({
 			{ L"orderDetails", order_details },
 			{ L"commonPerfomerIds", JsonArray{ } },
-			{ L"areaCode", strjson(order_info.areaCode) },
-			{ L"telephone", strjson(order_info.telephone) },
+			{ L"areaCode", args.Lookup(L"areaCode") },
+			{ L"telephone", args.Lookup(L"telephone") },
 			{ L"addressId", L""_json },
 			{ L"teamId", L""_json },
 			{ L"couponId", L""_json },
 			{ L"checkCode", L""_json },
 			{ L"source", 0_json },
 			{ L"discount", 0_json },
-			{ L"sessionId", intjson(order_info.sessionId) },
+			{ L"sessionId", args.Lookup(L"sessionId") },
 			{ L"freight", 0_json },
-			{ L"amountPayable", strjson(order_info.totalAmount) },
-			{ L"totalAmount", strjson(order_info.totalAmount) },
+			{ L"amountPayable", args.Lookup(L"totalAmount") },
+			{ L"totalAmount", args.Lookup(L"totalAmount") },
 			{ L"partner", L""_json },
 			{ L"orderSource", 1_json },
 			{ L"videoId", L""_json },
@@ -295,70 +301,55 @@ namespace work {
 			{ L"trackPath", L""_json }
 			}) };
 		JsonObject encrypt_data{ util::map_to_json({
-			{ L"q", strjson(EncryptOrder(json_data.Stringify(), crtrace_id)) }
+			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id)) }
 			}) };
-
 		hstring data{ encrypt_data.Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
 		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/order", data, info);
 		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
 		res.EnsureSuccessStatusCode();
 		hstring body{ co_await res.Content().ReadAsStringAsync() };
-		info.Message(body);
-
+		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
-		if (json.Lookup(L"state").GetString() == L"1") {
-			Controls::ContentDialog dialog;
-			dialog.CloseButtonText(L"关闭");
-			dialog.DefaultButton(Controls::ContentDialogButton::Close);
-			dialog.Title(box_value(L"购票成功!"));
-			dialog.XamlRoot(window.ShowPanel().XamlRoot());
-			co_await dialog.ShowAsync();
+		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok) {
+			ret.Insert(L"orderJobKey", json.GetNamedObject(L"result").Lookup(L"orderJobKey"));
 		}
+		else {
+			ret.Insert(L"Information", json.Lookup(L"msg"));
+		}
+		co_return ret;
 	}
 
-	// 买票
-	IAsyncAction BuyTickets() {
-		if (auto ticket_num{ co_await InputTicketNum() }) {
-			ShowStart::Info info{ window.GlobalInfo() };
-			HttpClient client{ window.Client() };
-			Uri url{ L"https://wap.showstart.com/v3/order/wap/order/confirm" };
-			hstring data{ util::map_to_json({
-				{ L"st_flpv", strjson(info.StFlpv()) },
-				{ L"sign", strjson(info.Sign()) },
-				{ L"trackPath", L""_json },
-				{ L"sequence", strjson(info.ActivityId()) },
-				{ L"ticketId", strjson(info.TicketId()) },
-				{ L"ticketNum", strjson(to_hstring(ticket_num)) },
-			}).Stringify() };
-			HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-			MakeHeader(client.DefaultRequestHeaders(), L"", L"/order/wap/order/confirm", data, info);
-			HttpResponseMessage res{ co_await client.PostAsync(url, content) };
-			res.EnsureSuccessStatusCode();
-			hstring body{ co_await res.Content().ReadAsStringAsync() };
-			info.Message(body);
-
-			auto json{ JsonObject::Parse(body) };
-			if (json.Lookup(L"state").GetString() == L"1") {
-				auto orderInfoVo{ json.Lookup(L"result").GetObject().Lookup(L"orderInfoVo").GetObject() };
-				auto ticketPriceVo{ orderInfoVo.Lookup(L"ticketPriceVo").GetObject() };
-				auto price{ ticketPriceVo.Lookup(L"price").GetNumber() };
-				OrderInfo order_info{
-					.skuType = (int)ticketPriceVo.Lookup(L"ticketType").GetNumber(),
-					.num = to_hstring(ticket_num),
-					.goodsId = (int)orderInfoVo.Lookup(L"activityId").GetNumber(),
-					.skuId = info.TicketId(),
-					.price = price,
-					.goodsPhoto = orderInfoVo.Lookup(L"poster").GetString(),
-					.dyPOIType = (int)ticketPriceVo.Lookup(L"dyPOIType").GetNumber(),
-					.goodsName = orderInfoVo.Lookup(L"title").GetString(),
-					.areaCode = orderInfoVo.Lookup(L"areaCode").GetString(),
-					.telephone = orderInfoVo.Lookup(L"telephone").GetString(),
-					.sessionId = (int)orderInfoVo.Lookup(L"sessionId").GetNumber(),
-					.totalAmount = to_hstring(price * ticket_num)
-				};
-				co_await Order(order_info);
-			}
+	IAsyncOperation<JsonObject> api_get_order_result(JsonObject args) {
+		JsonObject ret;
+		HttpClient client{ window.Client() };
+		ShowStart::Info info{ window.GlobalInfo() };
+		Uri url{ L"https://wap.showstart.com/v3/nj/order/getOrderResult" };
+		hstring crtrace_id{ util::uuid32() + util::timestamp13() };
+		auto json_data{ util::map_to_json({
+			{ L"orderJobKey", args.Lookup(L"orderJobKey") },
+			{ L"st_flpv", strjson(info.StFlpv()) },
+			{ L"sign", strjson(info.Sign()) },
+			{ L"trackPath", L""_json }
+			}) };
+		JsonObject encrypt_data{ util::map_to_json({
+			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id)) }
+			}) };
+		hstring data{ encrypt_data.Stringify() };
+		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
+		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/getOrderResult", data, info);
+		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		res.EnsureSuccessStatusCode();
+		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		ret.Insert(L"Message", strjson(body));
+		auto json{ JsonObject::Parse(body) };
+		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (!ok) {
+			ret.Insert(L"Information", json.Lookup(L"msg"));
 		}
+		co_return ret;
 	}
 }

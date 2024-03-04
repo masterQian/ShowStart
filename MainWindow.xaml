@@ -6,7 +6,7 @@
         xmlns:local="using:ShowStart"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         Title="秀动抢票" mc:Ignorable="d">
-    <Grid x:Name="MainGrid" ColumnDefinitions="400, *" RowDefinitions="48, Auto, *">
+    <Grid ColumnDefinitions="400, *" Loaded="UpdateTokenClick" RowDefinitions="48, Auto, *">
         <Grid.Resources>
             <DataTemplate x:Name="SingerItemTemplate" x:DataType="local:Singer">
                 <StackPanel Orientation="Horizontal">
@@ -27,32 +27,28 @@
               RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto, *">
             <TextBlock Grid.Row="0" Grid.Column="0" Margin="10,5,10,5"
                        VerticalAlignment="Center" Text="UserId" />
-            <TextBox Grid.Row="0" Grid.Column="1" Margin="10,5,10,5"
-                     IsReadOnly="True"
-                     Text="{x:Bind GlobalInfo.UserId, Mode=TwoWay}" />
+            <TextBox Grid.Row="0" Grid.Column="1" Margin="10,5,10,5" Text="{x:Bind GlobalInfo.UserId, Mode=TwoWay}" />
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="10,5,10,5"
                        VerticalAlignment="Center" Text="Sign" />
-            <TextBox Grid.Row="1" Grid.Column="1" Margin="10,5,10,5"
-                     IsReadOnly="True"
-                     Text="{x:Bind GlobalInfo.Sign, Mode=TwoWay}" />
+            <TextBox Grid.Row="1" Grid.Column="1" Margin="10,5,10,5" Text="{x:Bind GlobalInfo.Sign, Mode=TwoWay}" />
             <TextBlock Grid.Row="2" Grid.Column="0" Margin="10,5,10,5"
-                       VerticalAlignment="Center" Text="StFlpv" />
-            <TextBox Grid.Row="2" Grid.Column="1" Margin="10,5,10,5"
-                     IsReadOnly="True"
-                     Text="{x:Bind GlobalInfo.StFlpv, Mode=TwoWay}" />
+                       VerticalAlignment="Center" Text="ActivityId" />
+            <TextBox Grid.Row="2" Grid.Column="1" Margin="10,5,10,5" Text="{x:Bind GlobalInfo.ActivityId, Mode=TwoWay}" />
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="10,5,10,5"
-                       VerticalAlignment="Center" Text="Token" />
+                       VerticalAlignment="Center" Text="TicketId" />
             <TextBox Grid.Row="3" Grid.Column="1" Margin="10,5,10,5"
                      IsReadOnly="True"
-                     Text="{x:Bind GlobalInfo.Token, Mode=TwoWay}" />
+                     Text="{x:Bind GlobalInfo.TicketId, Mode=TwoWay}" />
             <TextBlock Grid.Row="4" Grid.Column="0" Margin="10,5,10,5"
-                       VerticalAlignment="Center" Text="ActivityId" />
-            <TextBox Grid.Row="4" Grid.Column="1" Margin="10,5,10,5" Text="{x:Bind GlobalInfo.ActivityId, Mode=TwoWay}" />
+                       VerticalAlignment="Center" Text="StFlpv" />
+            <TextBox Grid.Row="4" Grid.Column="1" Margin="10,5,10,5"
+                     IsReadOnly="True"
+                     Text="{x:Bind GlobalInfo.StFlpv, Mode=TwoWay}" />
             <TextBlock Grid.Row="5" Grid.Column="0" Margin="10,5,10,5"
-                       VerticalAlignment="Center" Text="TicketId" />
+                       VerticalAlignment="Center" Text="Token" />
             <TextBox Grid.Row="5" Grid.Column="1" Margin="10,5,10,5"
                      IsReadOnly="True"
-                     Text="{x:Bind GlobalInfo.TicketId, Mode=TwoWay}" />
+                     Text="{x:Bind GlobalInfo.Token, Mode=TwoWay}" />
             <TextBlock Grid.Row="6" Grid.Column="0" Margin="10,5,10,5"
                        VerticalAlignment="Center" Text="AccessToken" />
             <TextBox Grid.Row="6" Grid.Column="1" Margin="10,5,10,5"
@@ -64,18 +60,27 @@
                      IsReadOnly="True"
                      Text="{x:Bind GlobalInfo.IdToken, Mode=TwoWay}" />
             <TextBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
-                     Margin="10" IsReadOnly="True"
+                     Margin="10" Header="请求日志:" IsReadOnly="True"
                      Text="{x:Bind GlobalInfo.Message, Mode=TwoWay}"
                      TextWrapping="Wrap" />
         </Grid>
         <CommandBar Grid.Row="1" Grid.Column="1"
                     Background="Transparent"
                     DefaultLabelPosition="Right" IsOpen="False">
-            <AppBarButton x:Name="GetDetailsButton" AllowFocusOnInteraction="True" Icon="Zoom" Label="查看详情" />
-            <AppBarButton x:Name="BuyTicketsButton" AllowFocusOnInteraction="True" Icon="Favorite" Label="购买" />
-            <AppBarButton x:Name="ThreadBuyButton" AllowFocusOnInteraction="True" Icon="Play" Label="多线程抢票" />
+            <AppBarButton AllowFocusOnInteraction="True" Click="UpdateTokenClick" Icon="Refresh" Label="更新Token" />
+            <AppBarButton AllowFocusOnInteraction="True" Click="GetDetailsClick" Icon="Zoom" Label="查票" />
+            <AppBarButton AllowFocusOnInteraction="True" Click="BuyClick" Icon="Favorite" Label="买票" />
+            <AppBarButton AllowFocusOnInteraction="True" Click="MutilThreadBuyClick" Icon="Play" Label="多线程抢票" />
         </CommandBar>
         <local:ShowInfo x:Name="ShowPanel" Grid.Row="2" Grid.Column="1"
                         BorderBrush="AliceBlue" BorderThickness="2" />
+        <ContentDialog x:Name="InputTicketNumDialog" Title="输入票的张数"
+                       CloseButtonText="取消" DefaultButton="Primary"
+                       PrimaryButtonText="确定">
+            <NumberBox x:Name="InputTicketNumBox" Maximum="99"
+                       Minimum="1" SpinButtonPlacementMode="Inline"
+                       Value="1" />
+        </ContentDialog>
+        <ContentDialog x:Name="TipDialog" CloseButtonText="关闭" DefaultButton="Close" />
     </Grid>
 </Window>

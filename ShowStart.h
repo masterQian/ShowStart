@@ -15,7 +15,10 @@ namespace util {
 }
 
 namespace work {
-	winrt::Windows::Foundation::IAsyncAction UpdateToken();
-	winrt::Windows::Foundation::IAsyncAction GetDetails();
-	winrt::Windows::Foundation::IAsyncAction BuyTickets();
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_get_token();
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_activity_details();
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_ticket_list();
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_order_confirm(winrt::Windows::Data::Json::JsonObject args);
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_order(winrt::Windows::Data::Json::JsonObject args);
+	winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject> api_get_order_result(winrt::Windows::Data::Json::JsonObject args);
 }

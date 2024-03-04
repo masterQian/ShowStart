@@ -13,6 +13,13 @@ namespace winrt::ShowStart::implementation {
 
         Windows::Web::Http::HttpClient mClient;
         Windows::Web::Http::HttpClient Client() { return mClient; }
+
+        Windows::Foundation::IAsyncAction ShowTipDialog(hstring);
+
+        Windows::Foundation::IAsyncAction UpdateTokenClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction GetDetailsClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction BuyClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction MutilThreadBuyClick(IInspectable const&, RoutedEventArgs const&);
     };
 }
 

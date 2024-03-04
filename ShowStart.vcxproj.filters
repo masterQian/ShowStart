@@ -20,6 +20,9 @@
     <Midl Include="Ticket.idl">
       <Filter>models</Filter>
     </Midl>
+    <Midl Include="Order.idl">
+      <Filter>models</Filter>
+    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -37,6 +40,9 @@
       <Filter>models</Filter>
     </ClCompile>
     <ClCompile Include="Ticket.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="Order.cpp">
       <Filter>models</Filter>
     </ClCompile>
   </ItemGroup>
@@ -76,6 +82,9 @@
     <ClInclude Include="Ticket.h">
       <Filter>models</Filter>
     </ClInclude>
+    <ClInclude Include="Order.h">
+      <Filter>models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis">
@@ -86,5 +95,8 @@
     <Image Include="Assets\logo.png">
       <Filter>Assets</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ShowStart.rc" />
   </ItemGroup>
 </Project>

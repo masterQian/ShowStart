@@ -100,6 +100,9 @@
     <ClInclude Include="Info.h">
       <DependentUpon>Info.idl</DependentUpon>
     </ClInclude>
+    <ClInclude Include="Order.h">
+	<DependentUpon>Order.idl</DependentUpon>
+    </ClInclude>
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
@@ -116,7 +119,7 @@
       <DependentUpon>Singer.idl</DependentUpon>
     </ClInclude>
     <ClInclude Include="Ticket.h">
- 	<DependentUpon>Ticket.idl</DependentUpon>
+      <DependentUpon>Ticket.idl</DependentUpon>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -129,6 +132,9 @@
   <ItemGroup>
     <ClCompile Include="Info.cpp">
       <DependentUpon>Info.idl</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="Order.cpp">
+	<DependentUpon>Order.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -149,7 +155,7 @@
       <DependentUpon>Singer.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="Ticket.cpp">
-	<DependentUpon>Ticket.idl</DependentUpon>
+      <DependentUpon>Ticket.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -159,6 +165,7 @@
       <SubType>Code</SubType>
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
+    <Midl Include="Order.idl" />
     <Midl Include="ShowInfo.idl">
       <DependentUpon>ShowInfo.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -180,6 +187,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\logo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ShowStart.rc" />
   </ItemGroup>
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
