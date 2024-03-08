@@ -32,6 +32,7 @@ namespace util {
 	}
 
 	hstring uuid32() noexcept {
+		std::srand(static_cast<unsigned int>(std::chrono::system_clock::now().time_since_epoch().count()));
 		hstring n{ L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + timestamp13() };
 		wchar_t buf[33]{ };
 		for (auto& i : buf) {

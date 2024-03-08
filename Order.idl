@@ -1,14 +1,13 @@
 namespace ShowStart {
     [default_interface]
     runtimeclass Order : Microsoft.UI.Xaml.Data.INotifyPropertyChanged {
-        Order();
+        Order(String mUserId, String mSign, String mActivityId, String mTicketId, Double mTicketNum, Double mThreadNum);
 
         String UserId; // 用户ID
         String Sign; // 登录签名
         String ActivityId; // 演出ID
         String TicketId; // 票ID
         Double TicketNum; // 票张数
-        Double LoopNum; // 循环数
         Double ThreadNum; // 线程数
     }
 }

@@ -1,0 +1,7 @@
+namespace ShowStart {
+    [bindable]
+    [default_interface]
+    runtimeclass BoolReverseConverter : Microsoft.UI.Xaml.Data.IValueConverter {
+        BoolReverseConverter();
+    }
+}

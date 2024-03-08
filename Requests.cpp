@@ -9,60 +9,36 @@ using namespace Windows::Data::Json;
 using namespace Microsoft::UI::Xaml;
 
 namespace work {
-	[[nodiscard]] inline JsonValue operator ""_json(wchar_t const* str, unsigned long long size) {
-		return JsonValue::CreateStringValue(hstring(str, static_cast<hstring::size_type>(size)));
-	}
-
-	[[nodiscard]] inline JsonValue operator ""_json(unsigned long long value) {
-		return JsonValue::CreateNumberValue(static_cast<double>(value));
-	}
-
-	[[nodiscard]] inline JsonValue operator ""_json(long double value) {
-		return JsonValue::CreateNumberValue(static_cast<double>(value));
-	}
-
-	[[nodiscard]] inline JsonValue strjson(hstring const& value) {
-		return JsonValue::CreateStringValue(value);
-	}
-
-	[[nodiscard]] inline JsonValue intjson(int value) {
-		return JsonValue::CreateNumberValue(static_cast<double>(value));
-	}
-
 	// 处理请求头
-	void MakeHeader(Headers::HttpRequestHeaderCollection const& headers, hstring const& crtrace_id, hstring const& url, hstring const& data, ShowStart::Info const& info) {
-		hstring user_id{ info.UserId() };
-		hstring sign{ info.Sign() };
-		hstring access_token{ info.AccessToken() };
-		hstring id_token{ info.IdToken() };
-		hstring token{ info.Token() };
-		hstring st_flpv{ info.StFlpv() };
+	void MakeHeader(Headers::HttpRequestHeaderCollection const& headers, hstring const& crtrace_id,
+		hstring const& url, hstring const& data, hstring const& UserId, hstring const& Sign,
+		hstring const& AccessToken, hstring const& IdToken, hstring const& Token, hstring const& StFlpv) {
+		
 		hstring v{ crtrace_id.empty() ? util::uuid32() + util::timestamp13() : crtrace_id };
-		hstring crp_sign{ access_token + sign + id_token + user_id + L"wap" + token + data + url + L"997" + L"wap" + v };
-
+		hstring crp_sign{ AccessToken + Sign + IdToken + UserId + L"wap" + Token + data + url + L"997" + L"wap" + v };
+		
 		headers.UserAgent().TryParseAdd(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0");
-		headers.Insert(L"CUSAT", access_token);
-		headers.Insert(L"CUSUT", sign);
-		headers.Insert(L"CUSIT", id_token);
-		headers.Insert(L"CUSID", user_id);
+		headers.Insert(L"CUSAT", AccessToken);
+		headers.Insert(L"CUSUT", Sign);
+		headers.Insert(L"CUSIT", IdToken);
+		headers.Insert(L"CUSID", UserId);
 		headers.Insert(L"CUSNAME", L"nil");
 		headers.Insert(L"CTERMINAL", L"wap");
 		headers.Insert(L"CSAPPID", L"wap");
-		headers.Insert(L"CDEVICENO", token);
-		headers.Insert(L"CUUSERREF", token);
+		headers.Insert(L"CDEVICENO", Token);
+		headers.Insert(L"CUUSERREF", Token);
 		headers.Insert(L"CVERSION", L"997");
 		headers.Insert(L"CDEVICEINFO", L"%7B%22vendorName%22:%22%22,%22deviceMode%22:%22PC%22,%22deviceName%22:%22%22,%22systemName%22:%22windows%22,%22systemVersion%22:%2210%20x64%22,%22cpuMode%22:%22%20%22,%22cpuCores%22:%22%22,%22cpuArch%22:%22%22,%22memerySize%22:%22%22,%22diskSize%22:%22%22,%22network%22:%22UNKNOWN%22,%22resolution%22:%221536*864%22,%22pixelResolution%22:%22%22%7D");
 		headers.Insert(L"CRTRACEID", v);
-		headers.Insert(L"st_flpv", st_flpv);
+		headers.Insert(L"st_flpv", StFlpv);
 		headers.Insert(L"CTRACKPATH", L"");
 		headers.Insert(L"CSOURCEPATH", L"");
 		headers.Insert(L"CRPSIGN", util::get_md5(crp_sign));
 	}
 
 	// 加密下单数据
-	hstring EncryptOrderData(hstring const& data, hstring const& crtrace_id) {
-		ShowStart::Info info{ window.GlobalInfo() };
-		hstring T{ crtrace_id }, P{ info.Token() };
+	hstring EncryptOrderData(hstring const& data, hstring const& crtrace_id, hstring const& token) {
+		hstring T{ crtrace_id }, P{ token };
 		std::wstring k;
 		for (auto& i : { 2, 11, 22, 23, 29, 30, 33, 36 }) {
 			k.push_back(T[i - 1]);
@@ -75,21 +51,32 @@ namespace work {
 }
 
 namespace work {
-	IAsyncOperation<JsonObject> api_get_token() {
+	// [request]
+	// user_id
+	// sign
+	// token
+	// st_flpv
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// access_token
+	// id_token
+	// <option: !OK> Information 错误信息
+	JsonObject api_get_token(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		const ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/waf/gettoken" };
 		hstring data{ util::map_to_json({
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json }
 			}).Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), L"", L"/waf/gettoken", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/waf/gettoken", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"), L"", L"",
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
@@ -102,27 +89,49 @@ namespace work {
 		else {
 			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
 		}
-		co_return ret;
+		return ret;
 	}
 
-	IAsyncOperation<JsonObject> api_activity_details() {
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// activityId
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// activityName 演出名称
+	// avatar 演出海报
+	// price 演出价格
+	// showTime 演出时间
+	// host 主办方
+	// address 演出地址
+	// hostAvatar 主办方头像
+	// service 服务说明
+	// Singers 歌手集合 { name: 歌手名, avatar: 歌手头像 }
+	// <option: !OK> Information 错误信息
+	JsonObject api_activity_details(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		const ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/wap/activity/details" };
 		hstring data{ util::map_to_json({
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json },
 			{ L"coupon", L""_json },
-			{ L"activityId", strjson(info.ActivityId()) },
+			{ L"activityId", args.Lookup(L"activityId") },
 			{ L"shareId", L""_json }
 			}).Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/details", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/details", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" };
@@ -153,26 +162,40 @@ namespace work {
 		else {
 			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
 		}
-		co_return ret;
+		return ret;
 	}
 
-	IAsyncOperation<JsonObject> api_ticket_list() {
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// activityId
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// Tickets 票集合 { ticketId, ticketType, sellingPrice: 票价格, sessionName: 场次, time: 演出时间, maxNum: 最大限购张数, remainTicket: 余票情况 }
+	// <option: !OK> Information 错误信息
+	JsonObject api_ticket_list(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		const ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/wap/activity/V2/ticket/list" };
 		hstring data{ util::map_to_json({
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json },
 			{ L"coupon", L""_json },
-			{ L"activityId", strjson(info.ActivityId()) }
+			{ L"activityId", args.Lookup(L"activityId") }
 			}).Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/V2/ticket/list", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/activity/V2/ticket/list", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" };
@@ -207,28 +230,61 @@ namespace work {
 		else {
 			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
 		}
-		co_return ret;
+		return ret;
 	}
 
-	IAsyncOperation<JsonObject> api_order_confirm(JsonObject args) {
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// activityId
+	// ticketId
+	// TicketNum 票张数
+	// [response]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// ticketId
+	// OK 是否成功
+	// Message 原始文本
+	// skuType 票类型
+	// num 票张数
+	// goodsId 演出Id
+	// price 价格
+	// goodsPhoto 演出照片
+	// dyPOIType 抖音?
+	// goodsName 演出名称
+	// areaCode 地域
+	// telephone 电话
+	// sessionId 下单Id
+	// totalAmount 总价
+	// <option: !OK> Information 错误信息
+	JsonObject api_order_confirm(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		ShowStart::Info info{ window.GlobalInfo() };
 		auto ticket_num{ (int)args.GetNamedNumber(L"TicketNum") };
 		Uri url{ L"https://wap.showstart.com/v3/order/wap/order/confirm" };
 		hstring data{ util::map_to_json({
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json },
-			{ L"sequence", strjson(info.ActivityId()) },
-			{ L"ticketId", strjson(info.TicketId()) },
+			{ L"sequence", args.Lookup(L"activityId") },
+			{ L"ticketId", args.Lookup(L"ticketId") },
 			{ L"ticketNum", strjson(to_hstring(ticket_num)) },
 			}).Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), L"", L"/order/wap/order/confirm", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/order/wap/order/confirm", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" };
 		if (ok) {
@@ -236,11 +292,17 @@ namespace work {
 			auto ticketPriceVo{ orderInfoVo.GetNamedObject(L"ticketPriceVo") };
 			auto price{ ticketPriceVo.GetNamedNumber(L"price") };
 			ret = util::map_to_json({
+				{ L"user_id", args.Lookup(L"user_id") },
+				{ L"sign", args.Lookup(L"sign") },
+				{ L"access_token", args.Lookup(L"access_token") },
+				{ L"id_token", args.Lookup(L"id_token") },
+				{ L"token", args.Lookup(L"token") },
+				{ L"st_flpv", args.Lookup(L"st_flpv") },
+				{ L"ticketId", args.Lookup(L"ticketId") },
 				{ L"OK", JsonValue::CreateBooleanValue(true) },
 				{ L"skuType", ticketPriceVo.Lookup(L"ticketType") },
 				{ L"num", strjson(to_hstring(ticket_num)) },
 				{ L"goodsId", orderInfoVo.Lookup(L"activityId") },
-				{ L"skuId", strjson(info.TicketId()) },
 				{ L"price", JsonValue::CreateNumberValue(price) },
 				{ L"goodsPhoto", orderInfoVo.Lookup(L"poster") },
 				{ L"dyPOIType", ticketPriceVo.Lookup(L"dyPOIType") },
@@ -256,13 +318,36 @@ namespace work {
 			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
 		}
 		ret.Insert(L"Message", strjson(body));
-		co_return ret;
+		return ret;
 	}
 
-	IAsyncOperation<JsonObject> api_order(JsonObject args) {
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// activityId
+	// ticketId
+	// skuType 票类型
+	// num 票张数
+	// goodsId 演出Id
+	// price 价格
+	// goodsPhoto 演出照片
+	// dyPOIType 抖音?
+	// goodsName 演出名称
+	// areaCode 地域
+	// telephone 电话
+	// sessionId 下单Id
+	// totalAmount 总价
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// orderJobKey 下单记录Id
+	// <option: !OK> Information 错误信息
+	JsonObject api_order(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/nj/order/order" };
 		hstring crtrace_id{ util::uuid32() + util::timestamp13() };
 		JsonArray order_details;
@@ -271,7 +356,7 @@ namespace work {
 			{ L"skuType", args.Lookup(L"skuType") },
 			{ L"num", args.Lookup(L"num") },
 			{ L"goodsId", args.Lookup(L"goodsId") },
-			{ L"skuId", args.Lookup(L"skuId") },
+			{ L"skuId", args.Lookup(L"ticketId") },
 			{ L"price", args.Lookup(L"price") },
 			{ L"goodsPhoto", args.Lookup(L"goodsPhoto") },
 			{ L"dyPOIType", args.Lookup(L"dyPOIType") },
@@ -296,19 +381,22 @@ namespace work {
 			{ L"orderSource", 1_json },
 			{ L"videoId", L""_json },
 			{ L"payVideotype", L""_json },
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json }
 			}) };
 		JsonObject encrypt_data{ util::map_to_json({
-			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id)) }
+			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id, args.GetNamedString(L"token"))) }
 			}) };
 		hstring data{ encrypt_data.Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/order", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/order", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
@@ -319,30 +407,43 @@ namespace work {
 		else {
 			ret.Insert(L"Information", json.Lookup(L"msg"));
 		}
-		co_return ret;
+		return ret;
 	}
 
-	IAsyncOperation<JsonObject> api_get_order_result(JsonObject args) {
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// orderJobKey 下单记录Id
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// <option: !OK> Information 错误信息
+	JsonObject api_get_order_result(HttpClient client, JsonObject args) {
 		JsonObject ret;
-		HttpClient client{ window.Client() };
-		ShowStart::Info info{ window.GlobalInfo() };
 		Uri url{ L"https://wap.showstart.com/v3/nj/order/getOrderResult" };
 		hstring crtrace_id{ util::uuid32() + util::timestamp13() };
 		auto json_data{ util::map_to_json({
 			{ L"orderJobKey", args.Lookup(L"orderJobKey") },
-			{ L"st_flpv", strjson(info.StFlpv()) },
-			{ L"sign", strjson(info.Sign()) },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
 			{ L"trackPath", L""_json }
 			}) };
 		JsonObject encrypt_data{ util::map_to_json({
-			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id)) }
+			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id, args.GetNamedString(L"token"))) }
 			}) };
 		hstring data{ encrypt_data.Stringify() };
 		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
-		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/getOrderResult", data, info);
-		HttpResponseMessage res{ co_await client.PostAsync(url, content) };
+		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/getOrderResult", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
 		res.EnsureSuccessStatusCode();
-		hstring body{ co_await res.Content().ReadAsStringAsync() };
+		hstring body{ res.Content().ReadAsStringAsync().get() };
 		ret.Insert(L"Message", strjson(body));
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
@@ -350,6 +451,6 @@ namespace work {
 		if (!ok) {
 			ret.Insert(L"Information", json.Lookup(L"msg"));
 		}
-		co_return ret;
+		return ret;
 	}
 }

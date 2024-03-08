@@ -8,6 +8,9 @@
     <Page Include="ShowInfo.xaml">
       <Filter>models</Filter>
     </Page>
+    <Page Include="OrderView.xaml">
+      <Filter>models</Filter>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MainWindow.idl" />
@@ -21,6 +24,9 @@
       <Filter>models</Filter>
     </Midl>
     <Midl Include="Order.idl">
+      <Filter>models</Filter>
+    </Midl>
+    <Midl Include="Converter.idl">
       <Filter>models</Filter>
     </Midl>
   </ItemGroup>
@@ -43,6 +49,9 @@
       <Filter>models</Filter>
     </ClCompile>
     <ClCompile Include="Order.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="Converter.cpp">
       <Filter>models</Filter>
     </ClCompile>
   </ItemGroup>
@@ -83,6 +92,9 @@
       <Filter>models</Filter>
     </ClInclude>
     <ClInclude Include="Order.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="Converter.h">
       <Filter>models</Filter>
     </ClInclude>
   </ItemGroup>

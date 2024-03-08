@@ -5,7 +5,10 @@ using namespace winrt::Microsoft::UI::Xaml;
 
 namespace winrt::ShowStart::implementation {
     struct Order : OrderT<Order> {
-        Order() { }
+        Order(hstring const& user_id, hstring const& sign, hstring const& activity_id,
+            hstring const& ticket_id, double ticket_num, double thread_num) :
+            mUserId{ user_id }, mSign{ sign }, mActivityId{ activity_id }, mTicketId{ ticket_id },
+            mTicketNum{ ticket_num }, mThreadNum{ thread_num } { }
 
         event<Data::PropertyChangedEventHandler> mPropertyChanged;
         event_token PropertyChanged(Data::PropertyChangedEventHandler const& value) {
@@ -51,7 +54,7 @@ namespace winrt::ShowStart::implementation {
             }
         }
 
-        double mTicketNum{ 1.0 };
+        double mTicketNum;
         double TicketNum() const { return mTicketNum; }
         void TicketNum(double value) {
             if (value != mTicketNum) {
@@ -60,16 +63,7 @@ namespace winrt::ShowStart::implementation {
             }
         }
 
-        double mLoopNum{ 1000.0 };
-        double LoopNum() const { return mLoopNum; }
-        void LoopNum(double value) {
-            if (value != mLoopNum) {
-                mLoopNum = value;
-                mPropertyChanged(*this, Data::PropertyChangedEventArgs{ L"LoopNum" });
-            }
-        }
-
-        double mThreadNum{ 4.0 };
+        double mThreadNum;
         double ThreadNum() const { return mThreadNum; }
         void ThreadNum(double value) {
             if (value != mThreadNum) {

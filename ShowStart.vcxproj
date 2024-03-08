@@ -97,11 +97,18 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BoolReverseConverter.h">
+      <DependentUpon>BoolReverseConverter.idl</DependentUpon>
+    </ClInclude>
     <ClInclude Include="Info.h">
       <DependentUpon>Info.idl</DependentUpon>
     </ClInclude>
     <ClInclude Include="Order.h">
-	<DependentUpon>Order.idl</DependentUpon>
+      <DependentUpon>Order.idl</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="OrderView.xaml.h">
+      <DependentUpon>OrderView.xaml</DependentUpon>
+      <SubType>Code</SubType>
     </ClInclude>
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h">
@@ -125,16 +132,26 @@
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <Page Include="OrderView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="ShowInfo.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BoolReverseConverter.cpp">
+      <DependentUpon>BoolReverseConverter.idl</DependentUpon>
+    </ClCompile>
     <ClCompile Include="Info.cpp">
       <DependentUpon>Info.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="Order.cpp">
-	<DependentUpon>Order.idl</DependentUpon>
+      <DependentUpon>Order.idl</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="OrderView.xaml.cpp">
+      <DependentUpon>OrderView.xaml</DependentUpon>
+      <SubType>Code</SubType>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -160,12 +177,17 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="BoolReverseConverter.idl" />
     <Midl Include="Info.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Midl>
     <Midl Include="Order.idl" />
+    <Midl Include="OrderView.idl">
+      <DependentUpon>OrderView.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Midl>
     <Midl Include="ShowInfo.idl">
       <DependentUpon>ShowInfo.xaml</DependentUpon>
       <SubType>Code</SubType>

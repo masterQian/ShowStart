@@ -70,10 +70,14 @@
             <AppBarButton AllowFocusOnInteraction="True" Click="UpdateTokenClick" Icon="Refresh" Label="更新Token" />
             <AppBarButton AllowFocusOnInteraction="True" Click="GetDetailsClick" Icon="Zoom" Label="查票" />
             <AppBarButton AllowFocusOnInteraction="True" Click="BuyClick" Icon="Favorite" Label="买票" />
-            <AppBarButton AllowFocusOnInteraction="True" Click="MutilThreadBuyClick" Icon="Play" Label="多线程抢票" />
+            <AppBarButton AllowFocusOnInteraction="True" Click="MultiThreadBuyClick" Icon="Play" Label="多线程抢票" />
         </CommandBar>
         <local:ShowInfo x:Name="ShowPanel" Grid.Row="2" Grid.Column="1"
-                        BorderBrush="AliceBlue" BorderThickness="2" />
+                        BorderBrush="AliceBlue" BorderThickness="2"
+                        Visibility="Visible" />
+        <local:OrderView x:Name="OrderPanel" Grid.Row="2" Grid.Column="1"
+                         BorderBrush="AliceBlue" BorderThickness="2"
+                         Visibility="Collapsed" />
         <ContentDialog x:Name="InputTicketNumDialog" Title="输入票的张数"
                        CloseButtonText="取消" DefaultButton="Primary"
                        PrimaryButtonText="确定">
