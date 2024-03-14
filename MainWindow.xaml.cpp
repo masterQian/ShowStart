@@ -57,8 +57,8 @@ namespace winrt::ShowStart::implementation {
 
         // 初始化信息
         {
-            mGlobalInfo.UserId(L"15171848");
-            mGlobalInfo.Sign(L"218decc0cade33071bc41d20b95a2b88");
+            mGlobalInfo.UserId(L"");
+            mGlobalInfo.Sign(L"");
             mGlobalInfo.StFlpv(util::uuid32());
             mGlobalInfo.Token(util::uuid32());
             mGlobalInfo.ActivityId(L"220303");
