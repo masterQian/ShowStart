@@ -33,6 +33,17 @@ namespace winrt::ShowStart::implementation {
             }
         }
 
+        hstring mIdCard;
+        hstring IdCard() const { return mIdCard; }
+        void IdCard(hstring const& value)
+        {
+            if (value != mIdCard)
+            {
+                mIdCard = value;
+                mPropertyChanged(*this, Data::PropertyChangedEventArgs{ L"IdCard" });
+            }
+        }
+
         hstring mStFlpv;
         hstring StFlpv() const { return mStFlpv; }
         void StFlpv(hstring const& value) {

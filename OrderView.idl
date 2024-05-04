@@ -5,7 +5,8 @@ namespace ShowStart {
     runtimeclass OrderView : Microsoft.UI.Xaml.Controls.UserControl {
         OrderView();
 
-        Windows.Foundation.Collections.IObservableVector<String> LogData { get; }; // 日志数据
-        Windows.Foundation.Collections.IObservableVector<Order> Orders { get; }; // 下单数据
+        void SetID(String activity_id, String ticket_id);
+
+        Windows.Foundation.Collections.IObservableVector<Order> Orders { get; };
     }
 }

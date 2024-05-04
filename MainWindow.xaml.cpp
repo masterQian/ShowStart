@@ -5,6 +5,9 @@
 #endif
 #include "ShowStart.h"
 
+#include <fstream>
+#include <winrt/Windows.ApplicationModel.DataTransfer.h>
+
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Data::Json;
 using namespace winrt::Windows::Web::Http;
@@ -57,11 +60,32 @@ namespace winrt::ShowStart::implementation {
 
         // 初始化信息
         {
-            mGlobalInfo.UserId(L"");
-            mGlobalInfo.Sign(L"");
             mGlobalInfo.StFlpv(util::uuid32());
             mGlobalInfo.Token(util::uuid32());
-            mGlobalInfo.ActivityId(L"220303");
+            std::wifstream ifs{ L"info.json" };
+            std::wstringstream ss;
+            ss << ifs.rdbuf();
+            hstring info_text{ ss.str() };
+            JsonObject info_json;
+            if (!info_text.empty() && JsonObject::TryParse(info_text, info_json))
+            {
+                if (auto v1{ info_json.TryLookup(L"UserId") })
+                {
+                    mGlobalInfo.UserId(v1.GetString());
+                }
+                if (auto v2{ info_json.TryLookup(L"Sign") })
+                {
+                    mGlobalInfo.Sign(v2.GetString());
+                }
+                if (auto v3{ info_json.TryLookup(L"IdCard") })
+                {
+                    mGlobalInfo.IdCard(v3.GetString());
+                }
+                if (auto v4{ info_json.TryLookup(L"ActivityId") })
+                {
+                    mGlobalInfo.ActivityId(v4.GetString());
+                }
+            }
         }
     }
 
@@ -87,6 +111,66 @@ namespace winrt::ShowStart::implementation {
         }
         mGlobalInfo.AccessToken(json.GetNamedString(L"access_token"));
         mGlobalInfo.IdToken(json.GetNamedString(L"id_token"));
+    }
+    
+    // 提取ID
+    Windows::Foundation::IAsyncAction MainWindow::GetIDClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        winrt::Windows::ApplicationModel::DataTransfer::DataPackage package;
+        package.SetText(L"javascript:alert('UserId: ' + localStorage.UserId + ' Sign: ' + localStorage.sign);");
+        Windows::ApplicationModel::DataTransfer::Clipboard::SetContent(package);
+        co_await GetIDDialog().ShowAsync();
+    }
+
+    // 查看身份证绑定信息
+    IAsyncAction MainWindow::IDCardBindClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        winrt::apartment_context ui_thread;
+
+        auto dialog{ IDCardBindDialog() };
+        auto viewers_list{ IDCardBindList().Items() };
+
+        co_await winrt::resume_background();
+        JsonObject json{ work::api_viewers_list(mClient, util::map_to_json({
+            { L"user_id", strjson(mGlobalInfo.UserId()) },
+            { L"sign", strjson(mGlobalInfo.Sign()) },
+            { L"access_token", strjson(mGlobalInfo.AccessToken()) },
+            { L"id_token", strjson(mGlobalInfo.IdToken()) },
+            { L"token", strjson(mGlobalInfo.Token()) },
+            { L"st_flpv", strjson(mGlobalInfo.StFlpv()) },
+            })) };
+        co_await ui_thread;
+
+        mGlobalInfo.Message(json.GetNamedString(L"Message"));
+        if (json.GetNamedBoolean(L"OK"))
+        {
+            viewers_list.Clear();
+            for (auto item : json.GetNamedArray(L"Viewers"))
+            {
+                auto viewer{ item.GetObject() };
+                viewers_list.Append(ShowStart::Viewer{
+                    winrt::to_hstring(static_cast<uint64_t>(viewer.GetNamedNumber(L"id"))),
+                    viewer.GetNamedString(L"name"),
+                    viewer.GetNamedString(L"showDocumentNumber"),
+                    });
+            }
+            co_await dialog.ShowAsync();
+        }
+        else
+        {
+            co_await ShowTipDialog(json.GetNamedString(L"Information"));
+        }
+    }
+
+    // 观演人被选择
+    void MainWindow::IDCardBindSelected(IInspectable const&, Controls::SelectionChangedEventArgs const& args)
+    {
+        if (auto items{ args.AddedItems() }; items && items.Size() == 1)
+        {
+            auto item{ items.GetAt(0).as<ShowStart::Viewer>() };
+            mGlobalInfo.IdCard(item.ViewId());
+            IDCardBindDialog().Hide();
+        }
     }
 
     // 获取演出信息
@@ -188,14 +272,18 @@ namespace winrt::ShowStart::implementation {
             { L"TicketNum", JsonValue::CreateNumberValue(ticket_num) }
             })) };
         co_await ui_thread;
-
+        
         mGlobalInfo.Message(json.GetNamedString(L"Message"));
         if (!json.GetNamedBoolean(L"OK")) {
             co_return co_await ShowTipDialog(json.GetNamedString(L"Information"));
         }
 
+        JsonArray idcards;
+        idcards.Append(intjson(std::stoi(mGlobalInfo.IdCard().data())));
+
         // 下单
         co_await winrt::resume_background();
+        json.Insert(L"IdCards", idcards);
         JsonObject order_json{ work::api_order(mClient, json) };
         co_await ui_thread;
 
@@ -226,16 +314,28 @@ namespace winrt::ShowStart::implementation {
     }
 
     // 多线程抢票
-    void MainWindow::MultiThreadBuyClick(IInspectable const&, RoutedEventArgs const&) {
+    void MainWindow::MultiThreadBuyClick(IInspectable const& sender, RoutedEventArgs const&) {
         auto showPanel{ ShowPanel() };
         auto orderPanel{ OrderPanel() };
+        auto button{ sender.as<Controls::AppBarButton>() };
         if (showPanel.Visibility() == Visibility::Visible) {
             showPanel.Visibility(Visibility::Collapsed);
             orderPanel.Visibility(Visibility::Visible);
+            orderPanel.SetID(mGlobalInfo.ActivityId(), mGlobalInfo.TicketId());
+            button.Label(L"票务详情");
+            button.Icon(Controls::SymbolIcon{ Controls::Symbol::Upload });
         }
         else {
             showPanel.Visibility(Visibility::Visible);
             orderPanel.Visibility(Visibility::Collapsed);
+            button.Label(L"多线程抢票");
+            button.Icon(Controls::SymbolIcon{ Controls::Symbol::Download });
         }
+    }
+
+    // 买票
+    IAsyncAction MainWindow::AboutClick(IInspectable const&, RoutedEventArgs const&)
+    {
+        co_await AboutDialog().ShowAsync();
     }
 }

@@ -5,6 +5,7 @@ namespace ShowStart {
 
         String UserId; // 用户ID
         String Sign; // 登录签名
+        String IdCard; // 身份证
         String StFlpv;
         String Token; // 登录令牌
         String ActivityId; // 演出ID

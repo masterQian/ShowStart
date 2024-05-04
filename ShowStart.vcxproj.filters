@@ -26,7 +26,8 @@
     <Midl Include="Order.idl">
       <Filter>models</Filter>
     </Midl>
-    <Midl Include="Converter.idl">
+    <Midl Include="BoolReverseConverter.idl" />
+    <Midl Include="Viewer.idl">
       <Filter>models</Filter>
     </Midl>
   </ItemGroup>
@@ -51,7 +52,7 @@
     <ClCompile Include="Order.cpp">
       <Filter>models</Filter>
     </ClCompile>
-    <ClCompile Include="Converter.cpp">
+    <ClCompile Include="Viewer.cpp">
       <Filter>models</Filter>
     </ClCompile>
   </ItemGroup>
@@ -94,7 +95,7 @@
     <ClInclude Include="Order.h">
       <Filter>models</Filter>
     </ClInclude>
-    <ClInclude Include="Converter.h">
+    <ClInclude Include="Viewer.h">
       <Filter>models</Filter>
     </ClInclude>
   </ItemGroup>

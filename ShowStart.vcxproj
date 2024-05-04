@@ -128,6 +128,9 @@
     <ClInclude Include="Ticket.h">
       <DependentUpon>Ticket.idl</DependentUpon>
     </ClInclude>
+    <ClInclude Include="Viewer.h">
+      <DependentUpon>Viewer.idl</DependentUpon>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -175,9 +178,13 @@
       <DependentUpon>Ticket.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="Util.cpp" />
+    <ClCompile Include="Viewer.cpp">
+      <DependentUpon>Viewer.idl</DependentUpon>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="BoolReverseConverter.idl" />
+    <Midl Include="Viewer.idl" />
     <Midl Include="Info.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>

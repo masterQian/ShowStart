@@ -12,5 +12,7 @@ namespace ShowStart {
         ShowStart.ShowInfo ShowPanel { get; };
 
         Microsoft.UI.Xaml.DataTemplate SingerItemTemplate { get; };
+
+        Windows.Foundation.IAsyncAction ShowTipDialog(String content);
     }
 }

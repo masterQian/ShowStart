@@ -10,122 +10,130 @@ using namespace winrt::Windows::Data::Json;
 using namespace winrt::Windows::Web::Http;
 
 namespace winrt::ShowStart::implementation {
-    OrderView::OrderView() {
+    OrderView::OrderView() : mOrders{ winrt::single_threaded_observable_vector<ShowStart::Order>() }
+    {
         InitializeComponent();
-        mOrders = single_threaded_observable_vector<ShowStart::Order>();
-        mLogData = multi_threaded_observable_vector<hstring>();
+    }
 
-        mLogData.VectorChanged([this] (auto...) {
-            if (auto size{ mLogData.Size() }) {
-                LogList().ScrollIntoView(box_value(mLogData.GetAt(size - 1U)));
+    Windows::Foundation::IAsyncAction OrderView::Import_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        auto import_box{ ImportBox() };
+        import_box.Text(L"");
+        auto result{ co_await ImportDialog().ShowAsync() };
+        if (result == Controls::ContentDialogResult::Primary)
+        {
+            auto text{ import_box.Text() };
+            bool isOK{ };
+            try
+            {
+                JsonArray json{ JsonArray::Parse(text) };
+                for (auto item : json)
+                {
+                    auto task{ item.GetArray() };
+                    mOrders.Append(ShowStart::Order{ task.GetStringAt(0), task.GetStringAt(1), task.GetStringAt(2) });
+                }
+                isOK = true;
             }
-        });
+            catch (...) { }
+            if (!isOK)
+            {
+                co_return co_await window.ShowTipDialog(L"任务数据格式非法");
+            }
+        }
     }
 
-    void OrderView::AddClick(IInspectable const&, RoutedEventArgs const&) {
+    void OrderView::Add_Click(IInspectable const&, RoutedEventArgs const&)
+    {
         const ShowStart::Info info{ window.GlobalInfo() };
-        mOrders.Append(ShowStart::Order{ info.UserId(), info.Sign(), info.ActivityId(), info.TicketId(), 1.0, 4.0 });
+        mOrders.Append(ShowStart::Order{ info.UserId(), info.Sign(), info.IdCard() });
     }
 
-    void OrderView::DeleteClick(IInspectable const&, RoutedEventArgs const&) {
-        if (auto item{ OrderList().SelectedItem() }) {
+    void OrderView::Delete_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        if (auto item{ LV_Orders().SelectedItem() })
+        {
             uint32_t index{ };
             mOrders.IndexOf(item.as<ShowStart::Order>(), index);
             mOrders.RemoveAt(index);
         }
     }
 
-    void OrderView::ClearClick(IInspectable const&, RoutedEventArgs const&) {
+    void OrderView::Clear_Click(IInspectable const&, RoutedEventArgs const&)
+    {
         mOrders.Clear();
-        mLogData.Clear();
     }
 
-    IAsyncAction OrderView::OrderTask(apartment_context ui_thread, int task_id, int* task_sign, hstring user_id, Windows::Data::Json::JsonObject confirm_json) {
-        while (*task_sign == 0) {
-            co_await winrt::resume_background();
-
-            HttpClient client;
-            JsonObject order_json{ work::api_order(client, confirm_json) };
-            bool ok{ order_json.GetNamedBoolean(L"OK") };
-
-            co_await ui_thread;
-            mLogData.Append(winrt::format(L"[用户{} 线程{}] order {}\n", user_id, task_id, ok ? L"抢票成功!" : order_json.GetNamedString(L"Information")));
-            if (ok) *task_sign = 2;
-        }
-
-        co_await ui_thread;
-        mLogData.Append(winrt::format(L"[用户{} 线程{}] {}终止\n", user_id, task_id, *task_sign == 1 ? L"手动" : L"成功"));
-        if (!std::ranges::any_of(mTasks, [ ] (int v) { return v == 0; })) {
-            mLogData.Append(winrt::format(L"[用户{}] 任务完成\n", user_id));
-            StopButton().IsEnabled(false);
-        }
-    }
-
-    IAsyncAction OrderView::StartClick(IInspectable const&, RoutedEventArgs const&) {
+    Windows::Foundation::IAsyncAction OrderView::Order_Task(ShowStart::Order order)
+    {
         winrt::apartment_context ui_thread;
-        
-        StopButton().IsEnabled(true);
+        HttpClient client;
+        auto idcards{ util::split_string(order.IdCards()) };
+        auto user_id{ strjson(order.UserId()) };
+        auto sign{ strjson(order.Sign()) };
+        auto activity_id{ strjson(TB_Activity().Text()) };
+        auto ticket_id{ strjson(TB_Ticket().Text()) };
+        auto token{ strjson(util::uuid32()) };
+        auto st_flpv{ strjson(util::uuid32()) };
+        IJsonValue access_token, id_token;
+        hstring log;
+        bool ok{ false };
 
-        int total_thread_num{ }, thread_index{ };
-        for (auto const order : mOrders) {
-            total_thread_num += (int)order.ThreadNum();
+        // get_token
+        co_await winrt::resume_background();
+        JsonObject token_json{ work::api_get_token(client, util::map_to_json({
+            { L"user_id", user_id },
+            { L"sign", sign },
+            { L"token", token },
+            { L"st_flpv", st_flpv },
+            })) };
+        co_await ui_thread;
+        ok = token_json.GetNamedBoolean(L"OK");
+        log = ok ? L"成功!" : token_json.GetNamedString(L"Information");
+        order.Log(winrt::format(L"{}[get_token] {}\n", order.Log(), log));
+        if (!ok) co_return;
+        access_token = token_json.Lookup(L"access_token");
+        id_token = token_json.Lookup(L"id_token");
+
+        // order_confirm
+        co_await winrt::resume_background();
+        JsonObject confirm_json{ work::api_order_confirm(client, util::map_to_json({
+            { L"user_id", user_id },
+            { L"sign", sign },
+            { L"token", token },
+            { L"st_flpv", st_flpv },
+            { L"access_token", access_token },
+            { L"id_token", id_token },
+            { L"activityId", activity_id },
+            { L"ticketId", ticket_id },
+            { L"TicketNum", JsonValue::CreateNumberValue(idcards.Size()) }
+            })) };
+        co_await ui_thread;
+        ok = confirm_json.GetNamedBoolean(L"OK");
+        log = ok ? L"成功!" : confirm_json.GetNamedString(L"Information");
+        order.Log(winrt::format(L"{}[order_confirm] {}\n", order.Log(), log));
+        if (!ok) co_return;
+
+        // order
+        JsonArray viewer_ids;
+        for (auto idcard : idcards)
+        {
+            viewer_ids.Append(intjson(std::stoi(idcard.data())));
         }
-        mTasks = std::vector<int>(total_thread_num, 0);
-        
-        for (auto const order : mOrders) {
-            HttpClient mainClient;
-            int thread_num{ (int)order.ThreadNum() };
-            auto user_id{ strjson(order.UserId()) };
-            auto sign{ strjson(order.Sign()) };
-            auto token{ strjson(util::uuid32()) };
-            auto st_flpv{ strjson(util::uuid32()) };
-
-            co_await winrt::resume_background();
-            JsonObject token_json{ work::api_get_token(mainClient, util::map_to_json({
-                { L"user_id", user_id },
-                { L"sign", sign },
-                { L"token", token },
-                { L"st_flpv", st_flpv },
-                })) };
-            co_await ui_thread;
-
-            {
-                bool ok{ token_json.GetNamedBoolean(L"OK") };
-                mLogData.Append(winrt::format(L"[用户{}] get_token {}\n", order.UserId(), ok ? L"成功!" : token_json.GetNamedString(L"Information")));
-                if (!ok) continue;
-            }
-
-            co_await winrt::resume_background();
-            JsonObject confirm_json{ work::api_order_confirm(mainClient, util::map_to_json({
-                { L"user_id", user_id },
-                { L"sign", sign },
-                { L"token", token },
-                { L"st_flpv", st_flpv },
-                { L"access_token", token_json.Lookup(L"access_token") },
-                { L"id_token", token_json.Lookup(L"id_token") },
-                { L"activityId", strjson(order.ActivityId()) },
-                { L"ticketId", strjson(order.TicketId()) },
-                { L"TicketNum", JsonValue::CreateNumberValue(order.TicketNum()) }
-                })) };
-            co_await ui_thread;
-
-            {
-                bool ok{ confirm_json.GetNamedBoolean(L"OK") };
-                mLogData.Append(winrt::format(L"[用户{}] order_confirm {}\n", order.UserId(), ok ? L"成功!" : confirm_json.GetNamedString(L"Information")));
-                if (!ok) continue;
-            }
-
-            for (int i{ }; i < thread_num; ++i) {
-                OrderTask(ui_thread, i, &mTasks[thread_index++], order.UserId(), confirm_json);
-            }
-        }
+        confirm_json.Insert(L"IdCards", viewer_ids);
+        co_await winrt::resume_background();
+        JsonObject order_json{ work::api_order(client, confirm_json) };
+        co_await ui_thread;
+        ok = order_json.GetNamedBoolean(L"OK");
+        log = ok ? L"购买成功!" : order_json.GetNamedString(L"Information");
+        order.Log(winrt::format(L"{}[order] {}\n", order.Log(), log));
+        if (!ok) co_return;
     }
 
-    void OrderView::StopClick(IInspectable const&, RoutedEventArgs const&) {
-        for (auto& task : mTasks) {
-            if (task == 0) {
-                task = 1;
-            }
+    void OrderView::Start_Click(IInspectable const&, RoutedEventArgs const&)
+    {
+        for (auto order : mOrders)
+        {
+            Order_Task(order);
         }
     }
 }

@@ -17,9 +17,13 @@ namespace winrt::ShowStart::implementation {
         Windows::Foundation::IAsyncAction ShowTipDialog(hstring);
 
         Windows::Foundation::IAsyncAction UpdateTokenClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction GetIDClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction IDCardBindClick(IInspectable const&, RoutedEventArgs const&);
+        void IDCardBindSelected(IInspectable const&, Controls::SelectionChangedEventArgs const&);
         Windows::Foundation::IAsyncAction GetDetailsClick(IInspectable const&, RoutedEventArgs const&);
         Windows::Foundation::IAsyncAction BuyClick(IInspectable const&, RoutedEventArgs const&);
         void MultiThreadBuyClick(IInspectable const&, RoutedEventArgs const&);
+        Windows::Foundation::IAsyncAction AboutClick(IInspectable const&, RoutedEventArgs const&);
     };
 }
 

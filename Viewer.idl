@@ -1,0 +1,10 @@
+namespace ShowStart {
+    [default_interface]
+    runtimeclass Viewer {
+        Viewer(String view_id, String name, String idcard);
+
+        String ViewId { get; }; // ID
+        String Name { get; }; // 姓名
+        String IdCard { get; }; // 身份证
+    }
+}

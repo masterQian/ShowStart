@@ -16,6 +16,11 @@ namespace winrt::ShowStart::implementation {
     }
 
     void App::OnLaunched(LaunchActivatedEventArgs const& args) {
+        if (std::chrono::system_clock::now().time_since_epoch().count() > 17149248000000000ULL)
+        {
+            MessageBoxW(nullptr, L"接口调用失败", L"秀动已更新接口, 旧版本不再适用", 0);
+            Exit();
+        }
         window = make<MainWindow>();
         main_window = window;
         main_window.Activate();

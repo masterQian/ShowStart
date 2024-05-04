@@ -10,6 +10,7 @@ namespace util {
 	winrt::hstring replace_br(winrt::hstring const& data) noexcept;
 	winrt::hstring timestamp13() noexcept;
 	winrt::hstring uuid32() noexcept;
+	winrt::Windows::Foundation::Collections::IVector<winrt::hstring> split_string(winrt::hstring const& data) noexcept;
 	winrt::Windows::Data::Json::JsonObject map_to_json(std::unordered_map<winrt::hstring, winrt::Windows::Data::Json::IJsonValue> const& map) noexcept;
 	winrt::hstring get_md5(winrt::hstring const& data) noexcept;
 	winrt::hstring get_AES_base64(winrt::hstring const& data, winrt::hstring const& key) noexcept;
@@ -40,6 +41,10 @@ namespace work {
 			winrt::Windows::Web::Http::HttpClient client,
 			winrt::Windows::Data::Json::JsonObject args
 		);
+	winrt::Windows::Data::Json::JsonObject api_viewers_list(
+		winrt::Windows::Web::Http::HttpClient client,
+		winrt::Windows::Data::Json::JsonObject args
+	);
 	winrt::Windows::Data::Json::JsonObject api_activity_details(
 		winrt::Windows::Web::Http::HttpClient client,
 		winrt::Windows::Data::Json::JsonObject args

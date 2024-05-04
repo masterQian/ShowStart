@@ -42,6 +42,18 @@ namespace util {
 		return buf;
 	}
 
+	winrt::Windows::Foundation::Collections::IVector<winrt::hstring> split_string(winrt::hstring const& data) noexcept
+	{
+		std::wstringstream ss(data.data());
+		auto container{ winrt::single_threaded_vector<winrt::hstring>() };
+		std::wstring str;
+		while (ss >> str)
+		{
+			container.Append(str);
+		}
+		return container;
+	}
+
 	JsonObject map_to_json(std::unordered_map<hstring, IJsonValue> const& map) noexcept {
 		JsonObject json;
 		for (auto& [key, value] : map) {

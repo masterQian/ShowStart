@@ -99,6 +99,51 @@ namespace work {
 	// id_token
 	// token
 	// st_flpv
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// Viewers 观演人列表
+	// <option: !OK> Information 错误信息
+	JsonObject api_viewers_list(HttpClient client, JsonObject args)
+	{
+		JsonObject ret;
+		Uri url{ L"https://wap.showstart.com/v3/wap/cp/list" };
+		hstring data{ util::map_to_json({
+			{ L"pageNo", 1_json },
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
+			{ L"trackPath", L""_json },
+			}).Stringify() };
+		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
+		MakeHeader(client.DefaultRequestHeaders(), L"", L"/wap/cp/list", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
+		res.EnsureSuccessStatusCode();
+		hstring body{ res.Content().ReadAsStringAsync().get() };
+		ret.Insert(L"Message", strjson(body));
+		auto json{ JsonObject::Parse(body) };
+		auto ok{ json.GetNamedString(L"state") == L"1" };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok)
+		{
+			ret.Insert(L"Viewers", json.GetNamedArray(L"result"));
+		}
+		else
+		{
+			ret.Insert(L"Information", strjson(json.GetNamedString(L"msg", L"请求服务器失败")));
+		}
+		return ret;
+	}
+
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
 	// activityId
 	// [response]
 	// OK 是否成功
@@ -310,7 +355,7 @@ namespace work {
 				{ L"areaCode", orderInfoVo.Lookup(L"areaCode") },
 				{ L"telephone", orderInfoVo.Lookup(L"telephone") },
 				{ L"sessionId", orderInfoVo.Lookup(L"sessionId") },
-				{ L"totalAmount", strjson(winrt::format(L"{:.2f}", price * ticket_num)) }
+				{ L"totalAmount", strjson(winrt::format(L"{:.2f}", price * ticket_num)) },
 				});
 		}
 		else {
@@ -362,9 +407,14 @@ namespace work {
 			{ L"dyPOIType", args.Lookup(L"dyPOIType") },
 			{ L"goodsName", args.Lookup(L"goodsName") }
 			}));
+		JsonArray common_perfomer_ids;
+		for (auto ids : args.GetNamedArray(L"IdCards"))
+		{
+			common_perfomer_ids.Append(ids);
+		}
 		auto json_data{ util::map_to_json({
 			{ L"orderDetails", order_details },
-			{ L"commonPerfomerIds", JsonArray{ } },
+			{ L"commonPerfomerIds", common_perfomer_ids },
 			{ L"areaCode", args.Lookup(L"areaCode") },
 			{ L"telephone", args.Lookup(L"telephone") },
 			{ L"addressId", L""_json },
