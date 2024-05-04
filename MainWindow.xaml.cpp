@@ -117,7 +117,7 @@ namespace winrt::ShowStart::implementation {
     Windows::Foundation::IAsyncAction MainWindow::GetIDClick(IInspectable const&, RoutedEventArgs const&)
     {
         winrt::Windows::ApplicationModel::DataTransfer::DataPackage package;
-        package.SetText(L"javascript:alert('UserId: ' + localStorage.UserId + ' Sign: ' + localStorage.sign);");
+        package.SetText(L"javascript:alert('UserId: ' + JSON.parse(localStorage.userInfo).data.userId + ' Sign: ' + localStorage.sign);");
         Windows::ApplicationModel::DataTransfer::Clipboard::SetContent(package);
         co_await GetIDDialog().ShowAsync();
     }
@@ -259,6 +259,7 @@ namespace winrt::ShowStart::implementation {
 
         // 确认订单
         auto ticket_num{ InputTicketNumBox().Value() };
+
         co_await winrt::resume_background();
         JsonObject json{ work::api_order_confirm(mClient, util::map_to_json({
             { L"user_id", strjson(mGlobalInfo.UserId()) },
@@ -272,28 +273,55 @@ namespace winrt::ShowStart::implementation {
             { L"TicketNum", JsonValue::CreateNumberValue(ticket_num) }
             })) };
         co_await ui_thread;
-        
         mGlobalInfo.Message(json.GetNamedString(L"Message"));
-        if (!json.GetNamedBoolean(L"OK")) {
+        if (!json.GetNamedBoolean(L"OK"))
+        {
             co_return co_await ShowTipDialog(json.GetNamedString(L"Information"));
         }
 
-        JsonArray idcards;
-        idcards.Append(intjson(std::stoi(mGlobalInfo.IdCard().data())));
-
         // 下单
-        co_await winrt::resume_background();
+        JsonArray idcards;
+        if (auto idcards_text{ mGlobalInfo.IdCard() }; !idcards_text.empty())
+        {
+            idcards.Append(intjson(std::stoi(idcards_text.data())));
+        }
         json.Insert(L"IdCards", idcards);
+
+        co_await winrt::resume_background();
         JsonObject order_json{ work::api_order(mClient, json) };
         co_await ui_thread;
-
         mGlobalInfo.Message(order_json.GetNamedString(L"Message"));
-        if (!order_json.GetNamedBoolean(L"OK")) {
+        if (!order_json.GetNamedBoolean(L"OK"))
+        {
             co_return co_await ShowTipDialog(order_json.GetNamedString(L"Information"));
+        }
+
+        // 最新秀动更新需要等休眠时间失效
+        auto sleep_seconds{ order_json.GetNamedNumber(L"sleep") };
+        auto sleep_time{ std::chrono::milliseconds{ static_cast<uint64_t>(sleep_seconds * 1000) } };
+
+        // 核心下单
+        co_await winrt::resume_background();
+        std::this_thread::sleep_for(sleep_time);
+        JsonObject core_order_json{ work::api_core_order(mClient, util::map_to_json({
+            { L"user_id", strjson(mGlobalInfo.UserId()) },
+            { L"sign", strjson(mGlobalInfo.Sign()) },
+            { L"access_token", strjson(mGlobalInfo.AccessToken()) },
+            { L"id_token", strjson(mGlobalInfo.IdToken()) },
+            { L"token", strjson(mGlobalInfo.Token()) },
+            { L"st_flpv", strjson(mGlobalInfo.StFlpv()) },
+            { L"coreOrderKey", order_json.Lookup(L"coreOrderKey") }
+            })) };
+        co_await ui_thread;
+        mGlobalInfo.Message(core_order_json.GetNamedString(L"Message"));
+        if (!core_order_json.GetNamedBoolean(L"OK"))
+        {
+            co_return co_await ShowTipDialog(core_order_json.GetNamedString(L"Information"));
         }
 
         // 查看下单结果
         co_await winrt::resume_background();
+        std::this_thread::sleep_for(sleep_time);
         JsonObject order_result_json{ work::api_get_order_result(mClient, util::map_to_json({
             { L"user_id", strjson(mGlobalInfo.UserId()) },
             { L"sign", strjson(mGlobalInfo.Sign()) },
@@ -301,16 +329,21 @@ namespace winrt::ShowStart::implementation {
             { L"id_token", strjson(mGlobalInfo.IdToken()) },
             { L"token", strjson(mGlobalInfo.Token()) },
             { L"st_flpv", strjson(mGlobalInfo.StFlpv()) },
-            { L"orderJobKey", order_json.Lookup(L"orderJobKey") }
+            { L"orderJobKey", core_order_json.Lookup(L"orderJobKey") }
             })) };
         co_await ui_thread;
-
         mGlobalInfo.Message(order_result_json.GetNamedString(L"Message"));
-        if (!order_result_json.GetNamedBoolean(L"OK")) {
+        if (!order_result_json.GetNamedBoolean(L"OK"))
+        {
             co_return co_await ShowTipDialog(order_result_json.GetNamedString(L"Information"));
         }
 
-        co_await ShowTipDialog(L"购票成功!");
+        auto pay_link{ PayLink() };
+        auto order_id{ order_result_json.GetNamedString(L"OrderId") };
+        Windows::Foundation::Uri url{ L"https://wap.showstart.com/pages/order/activity/detail/detail?orderId=" + order_id };
+        pay_link.NavigateUri(url);
+        pay_link.Content(box_value(winrt::format(L"[支付链接] 订单ID: {}", order_id)));
+        co_await PayDialog().ShowAsync();
     }
 
     // 多线程抢票

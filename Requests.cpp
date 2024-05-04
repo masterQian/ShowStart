@@ -390,6 +390,7 @@ namespace work {
 	// OK 是否成功
 	// Message 原始文本
 	// orderJobKey 下单记录Id
+	// coreOrderKey 核心下单记录Id
 	// <option: !OK> Information 错误信息
 	JsonObject api_order(HttpClient client, JsonObject args) {
 		JsonObject ret;
@@ -407,14 +408,9 @@ namespace work {
 			{ L"dyPOIType", args.Lookup(L"dyPOIType") },
 			{ L"goodsName", args.Lookup(L"goodsName") }
 			}));
-		JsonArray common_perfomer_ids;
-		for (auto ids : args.GetNamedArray(L"IdCards"))
-		{
-			common_perfomer_ids.Append(ids);
-		}
 		auto json_data{ util::map_to_json({
 			{ L"orderDetails", order_details },
-			{ L"commonPerfomerIds", common_perfomer_ids },
+			{ L"commonPerfomerIds", args.GetNamedArray(L"IdCards") },
 			{ L"areaCode", args.Lookup(L"areaCode") },
 			{ L"telephone", args.Lookup(L"telephone") },
 			{ L"addressId", L""_json },
@@ -452,9 +448,64 @@ namespace work {
 		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
 		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
 		if (ok) {
-			ret.Insert(L"orderJobKey", json.GetNamedObject(L"result").Lookup(L"orderJobKey"));
+			auto result{ json.GetNamedObject(L"result") };
+			ret.Insert(L"orderJobKey", result.Lookup(L"orderJobKey"));
+			ret.Insert(L"coreOrderKey", result.Lookup(L"coreOrderKey"));
+			ret.Insert(L"sleep", result.Lookup(L"sleep"));
 		}
 		else {
+			ret.Insert(L"Information", json.Lookup(L"msg"));
+		}
+		return ret;
+	}
+
+	// [request]
+	// user_id
+	// sign
+	// access_token
+	// id_token
+	// token
+	// st_flpv
+	// coreOrderKey 核心下单记录Id
+	// [response]
+	// OK 是否成功
+	// Message 原始文本
+	// orderJobKey 下单记录Id
+	// <option: !OK> Information 错误信息
+	JsonObject api_core_order(HttpClient client, JsonObject args)
+	{
+		JsonObject ret;
+		Uri url{ L"https://wap.showstart.com/v3/nj/order/coreOrder" };
+		hstring crtrace_id{ util::uuid32() + util::timestamp13() };
+		auto json_data{ util::map_to_json({
+			{ L"st_flpv", args.Lookup(L"st_flpv") },
+			{ L"sign", args.Lookup(L"sign") },
+			{ L"trackPath", L""_json },
+			{ L"coreOrderKey", args.Lookup(L"coreOrderKey") }
+			}) };
+		JsonObject encrypt_data{ util::map_to_json({
+			{ L"q", strjson(EncryptOrderData(json_data.Stringify(), crtrace_id, args.GetNamedString(L"token"))) }
+			}) };
+		hstring data{ encrypt_data.Stringify() };
+		HttpStringContent content{ data, UnicodeEncoding::Utf8, L"application/json" };
+		MakeHeader(client.DefaultRequestHeaders(), crtrace_id, L"/nj/order/coreOrder", data,
+			args.GetNamedString(L"user_id"), args.GetNamedString(L"sign"),
+			args.GetNamedString(L"access_token"), args.GetNamedString(L"id_token"),
+			args.GetNamedString(L"token"), args.GetNamedString(L"st_flpv"));
+		HttpResponseMessage res{ client.PostAsync(url, content).get() };
+		res.EnsureSuccessStatusCode();
+		hstring body{ res.Content().ReadAsStringAsync().get() };
+		ret.Insert(L"Message", strjson(body));
+		auto json{ JsonObject::Parse(body) };
+		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
+		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
+		if (ok)
+		{
+			auto result{ json.GetNamedObject(L"result") };
+			ret.Insert(L"orderJobKey", result.Lookup(L"orderJobKey"));
+		}
+		else
+		{
 			ret.Insert(L"Information", json.Lookup(L"msg"));
 		}
 		return ret;
@@ -498,7 +549,12 @@ namespace work {
 		auto json{ JsonObject::Parse(body) };
 		auto ok{ json.GetNamedString(L"state") == L"1" && json.GetNamedBoolean(L"success") };
 		ret.Insert(L"OK", JsonValue::CreateBooleanValue(ok));
-		if (!ok) {
+		if (ok)
+		{
+			auto result{ json.GetNamedObject(L"result") };
+			ret.Insert(L"OrderId", result.Lookup(L"orderId"));
+		}
+		else {
 			ret.Insert(L"Information", json.Lookup(L"msg"));
 		}
 		return ret;

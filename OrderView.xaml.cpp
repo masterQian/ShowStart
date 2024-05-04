@@ -89,7 +89,7 @@ namespace winrt::ShowStart::implementation {
         co_await ui_thread;
         ok = token_json.GetNamedBoolean(L"OK");
         log = ok ? L"成功!" : token_json.GetNamedString(L"Information");
-        order.Log(winrt::format(L"{}[get_token] {}\n", order.Log(), log));
+        order.Log(winrt::format(L"Time:{}\n[get_token] {}\n", std::chrono::system_clock::now(), log));
         if (!ok) co_return;
         access_token = token_json.Lookup(L"access_token");
         id_token = token_json.Lookup(L"id_token");
@@ -124,8 +124,50 @@ namespace winrt::ShowStart::implementation {
         JsonObject order_json{ work::api_order(client, confirm_json) };
         co_await ui_thread;
         ok = order_json.GetNamedBoolean(L"OK");
-        log = ok ? L"购买成功!" : order_json.GetNamedString(L"Information");
+        log = ok ? L"成功!" : order_json.GetNamedString(L"Information");
         order.Log(winrt::format(L"{}[order] {}\n", order.Log(), log));
+        if (!ok) co_return;
+
+        // 最新秀动更新需要等休眠时间失效
+        auto sleep_seconds{ order_json.GetNamedNumber(L"sleep") };
+        auto sleep_time{ std::chrono::milliseconds{ static_cast<uint64_t>(sleep_seconds * 1000) } };
+
+        // core_order
+        co_await winrt::resume_background();
+        std::this_thread::sleep_for(sleep_time);
+        JsonObject core_order_json{ work::api_core_order(client, util::map_to_json({
+            { L"user_id", user_id },
+            { L"sign", sign },
+            { L"access_token", access_token },
+            { L"id_token", id_token },
+            { L"token", token },
+            { L"st_flpv", st_flpv },
+            { L"coreOrderKey", order_json.Lookup(L"coreOrderKey") }
+            })) };
+        co_await ui_thread;
+        ok = core_order_json.GetNamedBoolean(L"OK");
+        log = ok ? L"成功!" : core_order_json.GetNamedString(L"Information");
+        order.Log(winrt::format(L"{}[core_order] {}\n", order.Log(), log));
+        if (!ok) co_return;
+
+        // get_order_result
+        co_await winrt::resume_background();
+        std::this_thread::sleep_for(sleep_time);
+        JsonObject order_result_json{ work::api_get_order_result(client, util::map_to_json({
+            { L"user_id", user_id },
+            { L"sign", sign },
+            { L"access_token", access_token },
+            { L"id_token", id_token },
+            { L"token", token },
+            { L"st_flpv", st_flpv },
+            { L"orderJobKey", core_order_json.Lookup(L"orderJobKey") }
+            })) };
+        co_await ui_thread;
+        ok = order_result_json.GetNamedBoolean(L"OK");
+        auto order_id{ order_result_json.GetNamedString(L"OrderId") };
+        auto url{ L"https://wap.showstart.com/pages/order/activity/detail/detail?orderId=" + order_id };
+        log = ok ? winrt::format(L"购票成功! 支付链接: {}", url) : order_result_json.GetNamedString(L"Information");
+        order.Log(winrt::format(L"{}[core_order] {}\n", order.Log(), log));
         if (!ok) co_return;
     }
 

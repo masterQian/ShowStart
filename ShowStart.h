@@ -61,6 +61,10 @@ namespace work {
 			winrt::Windows::Web::Http::HttpClient client,
 			winrt::Windows::Data::Json::JsonObject args
 		);
+	winrt::Windows::Data::Json::JsonObject api_core_order(
+		winrt::Windows::Web::Http::HttpClient client,
+		winrt::Windows::Data::Json::JsonObject args
+	);
 	winrt::Windows::Data::Json::JsonObject api_get_order_result(
 			winrt::Windows::Web::Http::HttpClient client,
 			winrt::Windows::Data::Json::JsonObject args
